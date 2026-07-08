@@ -15,16 +15,7 @@ const origins = [
   ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
     : []),
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001',
 ]
-
-// Add any origin that starts with http in dev for v0 preview support
-if (process.env.NODE_ENV === 'development') {
-  origins.push(/^http:\/\/(localhost|127\.0\.0\.1):\d+$/)
-}
 
 export const auth = betterAuth({
   database: pool,
@@ -39,6 +30,8 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // 1 day
   },
   advanced: {
+    // Skip origin check in development for v0 preview iframe compatibility
+    skipOriginCheck: process.env.NODE_ENV === 'development',
     // In dev (v0 preview iframe), force cross-site cookies so the
     // session cookie is stored by the browser.
     defaultCookieAttributes:
