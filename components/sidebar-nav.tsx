@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, Bell, FileStack, MessageSquare, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Bell, Layers, Calendar, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 
@@ -19,19 +19,14 @@ const navItems = [
     icon: Users,
   },
   {
-    label: 'Noticeboard',
-    href: '/noticeboard',
-    icon: Bell,
+    label: 'Portfolios',
+    href: '/portfolios',
+    icon: Layers,
   },
   {
-    label: 'Media Files',
-    href: '/media-files',
-    icon: FileStack,
-  },
-  {
-    label: 'General',
-    href: '/general',
-    icon: MessageSquare,
+    label: 'Calendar',
+    href: '/calendar',
+    icon: Calendar,
   },
 ]
 

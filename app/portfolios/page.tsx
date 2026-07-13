@@ -2,16 +2,13 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { SidebarNav } from '@/components/sidebar-nav'
-import { StaffResourcesClient } from '@/components/staff-resources-client'
-import { getRootFolders } from '@/app/actions/staff-resources'
+import { Card } from '@/components/ui/card'
 
-export default async function StaffResourcesPage() {
+export default async function PortfoliosPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) {
     redirect('/sign-in')
   }
-
-  const folders = await getRootFolders()
 
   return (
     <div className="flex h-screen bg-background">
@@ -19,11 +16,13 @@ export default async function StaffResourcesPage() {
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground">Staff Resources</h1>
-            <p className="text-muted-foreground mt-2">Manage shared school resources and documents</p>
+            <h1 className="text-4xl font-bold text-foreground">Portfolios</h1>
+            <p className="text-muted-foreground mt-2">Manage student and school portfolios</p>
           </div>
 
-          <StaffResourcesClient initialFolders={folders} />
+          <Card className="p-12 text-center bg-card border-border">
+            <p className="text-muted-foreground">No portfolios available yet</p>
+          </Card>
         </div>
       </main>
     </div>
