@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FolderPlus, Upload, X, FileText, FolderOpen, ArrowLeft, Trash2, Pencil } from 'lucide-react'
+import { FolderPlus, Upload, X, FileText, FolderOpen, ArrowLeft, Trash2, Pencil, FolderPen } from 'lucide-react'
 import { StaffResourcesUpload } from '@/components/staff-resources-upload'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Toaster, useToast } from '@/components/ui/toast'
@@ -296,7 +296,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
                           size="icon"
                           onClick={() => startRename(folder)}
                         >
-                          <Pencil className="w-4 h-4" />
+                          <FolderPen className="w-4 h-4" /> Edit
                         </Button>
                         <Button
                           variant="ghost"
