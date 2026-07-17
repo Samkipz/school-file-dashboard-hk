@@ -41,9 +41,9 @@ export function EventsSection({ events }: { events: Event[] }) {
                     : 'bg-accent/30 border-border hover:bg-accent/50'
               }`}
             >
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <div
-                  className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                  className={`w-full sm:w-12 h-12 sm:h-12 rounded-lg flex flex-row sm:flex-col items-center justify-center text-xs font-semibold flex-shrink-0 ${
                     isToday
                       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
                       : isSoon

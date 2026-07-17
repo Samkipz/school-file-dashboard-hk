@@ -200,11 +200,11 @@ export function PortfoliosClient({ initialStudents }: { initialStudents: Student
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-3">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground">
           {selectedStudent ? `${selectedStudent.name}'s Portfolio` : 'Student Portfolios'}
         </h2>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           {!selectedStudent && (
             <Button className="gap-2" onClick={() => setIsCreatingStudent(true)}>
               <UserPlus className="w-4 h-4" />
@@ -338,7 +338,7 @@ export function PortfoliosClient({ initialStudents }: { initialStudents: Student
               {files.map((file) => (
                 <div
                   key={file.id}
-                  className="flex items-center justify-between rounded-lg border border-border bg-surface p-4"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-surface p-4 gap-3"
                 >
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-primary" />
@@ -349,7 +349,7 @@ export function PortfoliosClient({ initialStudents }: { initialStudents: Student
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 sm:flex-shrink-0">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenFile(file)}>
                       Open
                     </Button>

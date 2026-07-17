@@ -142,7 +142,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-3">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           {currentFolderId && (
             <Button variant="ghost" size="icon" onClick={handleBack}>
@@ -153,7 +153,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
             {currentFolder ? currentFolder.name : 'Staff Resources'}
           </h2>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           {!currentFolderId && (
             <Button className="gap-2" onClick={() => setIsCreatingFolder(true)}>
               <FolderPlus className="w-4 h-4" />
@@ -215,7 +215,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
               {files.map((file) => (
                 <div
                   key={file.id}
-                  className="flex items-center justify-between rounded-lg border border-border bg-surface p-4"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-surface p-4 gap-3"
                 >
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-primary" />
@@ -226,7 +226,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 sm:flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"

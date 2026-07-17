@@ -39,7 +39,7 @@ export function AnnouncementsSection({ announcements }: { announcements: Announc
               key={announcement.id}
               className="p-4 bg-accent/50 rounded-lg border border-border hover:bg-accent transition-colors cursor-pointer"
             >
-              <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                 <h3 className="font-medium text-foreground line-clamp-2 text-sm">{announcement.title}</h3>
                 <Badge className={`${colors.bg} ${colors.text} flex-shrink-0 text-xs`}>
                   {announcement.category}

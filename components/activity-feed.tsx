@@ -58,7 +58,7 @@ export function ActivityFeed({ activities, user }: { activities: Activity[]; use
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
                 {getActivityIcon(activity.actionType)}
                 <p className="text-sm font-medium text-foreground truncate">{activity.description}</p>
               </div>
