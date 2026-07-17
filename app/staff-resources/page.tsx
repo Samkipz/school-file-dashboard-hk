@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
-import { SidebarNav } from '@/components/sidebar-nav'
+import { AppLayout } from '@/components/app-layout'
 import { StaffResourcesClient } from '@/components/staff-resources-client'
 import { getRootFolders } from '@/app/actions/staff-resources'
 
@@ -14,18 +14,15 @@ export default async function StaffResourcesPage() {
   const folders = await getRootFolders()
 
   return (
-    <div className="flex h-screen bg-background">
-      <SidebarNav />
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground">Staff Resources</h1>
-            <p className="text-muted-foreground mt-2">Manage shared school resources and documents</p>
-          </div>
-
-          <StaffResourcesClient initialFolders={folders} />
+    <AppLayout>
+      <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground">Staff Resources</h1>
+          <p className="text-muted-foreground mt-2">Manage shared school resources and documents</p>
         </div>
-      </main>
-    </div>
+
+        <StaffResourcesClient initialFolders={folders} />
+      </div>
+    </AppLayout>
   )
 }
