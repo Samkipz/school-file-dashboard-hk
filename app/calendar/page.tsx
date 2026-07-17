@@ -12,7 +12,7 @@ export default async function CalendarPage() {
 
   return (
     <AppLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8p-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground">Calendar</h1>
           <p className="text-muted-foreground mt-2">View school events and important dates</p>
