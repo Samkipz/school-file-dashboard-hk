@@ -15,7 +15,7 @@ export default async function StaffResourcesPage() {
 
   return (
     <AppLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground">Staff Resources</h1>
           <p className="text-muted-foreground mt-2">Manage shared school resources and documents</p>
