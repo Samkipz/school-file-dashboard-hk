@@ -202,7 +202,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
         </div>
       )}
 
-      <Card className="p-12 bg-card border-border">
+      <Card className="p-6 sm:p-8 lg:p-10 xl:p-12 bg-card border-border">
         {currentFolderId ? (
           files.length === 0 ? (
             <div className="text-center text-muted-foreground">
