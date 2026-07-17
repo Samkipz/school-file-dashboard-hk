@@ -27,11 +27,14 @@ export function StaffResourcesUpload({
   currentFolderId: string | null
   onUpload: (file?: {
     id: string
-    fileName: string
-    fileType: string
-    fileSize: number
-    blobUrl: string
-    createdAt: Date
+    filename: string
+    originalName: string
+    mimeType: string
+    size: number
+    uploadedBy: string
+    uploadedAt: Date
+    bucketPath: string
+    folderId: string
   }) => void
 }) {
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)

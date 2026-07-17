@@ -90,14 +90,14 @@ export const folders = pgTable('folders', {
 
 export const files = pgTable('files', {
   id: text('id').primaryKey(),
-  userId: text('userId').notNull(),
+  filename: text('filename').notNull(),
+  originalName: text('originalName').notNull(),
+  mimeType: text('mimeType').notNull(),
+  size: bigint('size', { mode: 'number' }).notNull(),
+  uploadedBy: text('uploadedBy').notNull(),
+  uploadedAt: timestamp('uploadedAt').notNull().defaultNow(),
+  bucketPath: text('bucketPath').notNull(),
   folderId: text('folderId').notNull(),
-  fileName: text('fileName').notNull(),
-  fileType: text('fileType').notNull(),
-  fileSize: bigint('fileSize', { mode: 'number' }).notNull(),
-  blobUrl: text('blobUrl').notNull(),
-  createdAt: timestamp('createdAt').notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
 
 export const announcements = pgTable('announcements', {
@@ -129,4 +129,26 @@ export const activityLogs = pgTable('activity_logs', {
   targetId: text('targetId'),
   targetType: text('targetType'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+
+export const students = pgTable('students', {
+  id: text('id').primaryKey(),
+  userId: text('userId').notNull(),
+  name: text('name').notNull(),
+  className: text('className').notNull(),
+  avatarUrl: text('avatarUrl'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+})
+
+export const portfolioFiles = pgTable('portfolioFiles', {
+  id: text('id').primaryKey(),
+  filename: text('filename').notNull(),
+  originalName: text('originalName').notNull(),
+  mimeType: text('mimeType').notNull(),
+  size: bigint('size', { mode: 'number' }).notNull(),
+  uploadedBy: text('uploadedBy').notNull(),
+  uploadedAt: timestamp('uploadedAt').notNull().defaultNow(),
+  bucketPath: text('bucketPath').notNull(),
+  studentId: text('studentId').notNull(),
 })

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FolderPlus, Upload, X, FileText, FolderOpen, ArrowLeft, Trash2, Pencil, FolderPen } from 'lucide-react'
+import { FolderPlus, Upload, X, FileText, FolderOpen, ArrowLeft, Trash2, Pencil } from 'lucide-react'
 import { StaffResourcesUpload } from '@/components/staff-resources-upload'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Toaster, useToast } from '@/components/ui/toast'
@@ -15,16 +15,20 @@ import {
   deleteFile,
   renameFolder,
   deleteFolder,
+  getFileUrl,
 } from '@/app/actions/staff-resources'
 
 type Folder = { id: string; name: string }
 type FileRecord = {
   id: string
-  fileName: string
-  fileType: string
-  fileSize: number
-  blobUrl: string
-  createdAt: Date
+  filename: string
+  originalName: string
+  mimeType: string
+  size: number
+  uploadedBy: string
+  uploadedAt: Date
+  bucketPath: string
+  folderId: string
 }
 
 export function StaffResourcesClient({ initialFolders }: { initialFolders: Folder[] }) {
@@ -127,6 +131,15 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
     }
   }
 
+  const handleOpenFile = async (file: FileRecord) => {
+    try {
+      const url = await getFileUrl(file.id)
+      window.open(url, '_blank')
+    } catch {
+      addToast('Failed to open file', 'error')
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -207,9 +220,9 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-primary" />
                     <div>
-                      <p className="font-medium text-foreground">{file.fileName}</p>
+                      <p className="font-medium text-foreground">{file.originalName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {file.fileType} · {(Number(file.fileSize) / 1024).toFixed(1)} KB
+                        {file.mimeType} · {(Number(file.size) / 1024).toFixed(1)} KB
                       </p>
                     </div>
                   </div>
@@ -217,7 +230,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(file.blobUrl, '_blank')}
+                      onClick={() => handleOpenFile(file)}
                     >
                       Open
                     </Button>
@@ -296,7 +309,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
                           size="icon"
                           onClick={() => startRename(folder)}
                         >
-                          <FolderPen className="w-4 h-4" /> Edit
+                          <Pencil className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
