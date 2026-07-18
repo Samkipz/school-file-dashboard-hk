@@ -172,3 +172,14 @@ export async function getMediaFileUrl(id: string) {
   const { getR2PresignedUrl } = await import('@/lib/r2')
   return getR2PresignedUrl(file.bucketPath, 3600)
 }
+
+export async function getMediaFileMeta(id: string) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) throw new Error('Unauthorized')
+  const [file] = await db
+    .select()
+    .from(files)
+    .where(and(eq(files.id, id), eq(files.section, SECTION)))
+  if (!file) throw new Error('File not found')
+  return { id: file.id, originalName: file.originalName, mimeType: file.mimeType }
+}

@@ -39,3 +39,25 @@ export async function getR2PresignedUrl(key: string, expiresIn = 3600) {
   })
   return getSignedUrl(r2, command, { expiresIn })
 }
+
+export async function getR2Object(key: string) {
+  const res = await r2.send(
+    new GetObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: key,
+    })
+  )
+  return res
+}
+
+export function r2StreamToWeb(body: unknown): ReadableStream {
+  const sdkStream = body as { transformToWebStream?: () => ReadableStream } | null
+  if (sdkStream && typeof sdkStream.transformToWebStream === 'function') {
+    return sdkStream.transformToWebStream()
+  }
+  return new ReadableStream({
+    start(controller) {
+      controller.close()
+    },
+  })
+}

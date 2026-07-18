@@ -17,6 +17,8 @@ import {
   FileImage,
   PlayCircle,
   Loader2,
+  Download,
+  Maximize2,
 } from 'lucide-react'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Toaster, useToast } from '@/components/ui/toast'
@@ -28,7 +30,6 @@ import {
   deleteMediaFolder,
   getMediaFiles,
   deleteMediaFile,
-  getMediaFileUrl,
 } from '@/app/actions/media-files'
 
 type Folder = { id: string; name: string; description: string | null }
@@ -52,7 +53,9 @@ export function MediaFilesClient({ initialFolders }: { initialFolders: Folder[] 
   const [currentFolderId, setCurrentFolderId] = React.useState<string | null>(null)
   const [currentFolder, setCurrentFolder] = React.useState<Folder | null>(null)
   const [files, setFiles] = React.useState<MediaFile[]>([])
-  const [thumbUrls, setThumbUrls] = React.useState<Record<string, string>>({})
+  const [loadedIds, setLoadedIds] = React.useState<Set<string>>(new Set())
+  const [errorIds, setErrorIds] = React.useState<Set<string>>(new Set())
+  const [previewFile, setPreviewFile] = React.useState<MediaFile | null>(null)
 
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
   const [isCreatingFolder, setIsCreatingFolder] = React.useState(false)
@@ -71,15 +74,8 @@ export function MediaFilesClient({ initialFolders }: { initialFolders: Folder[] 
   const loadFiles = React.useCallback(async (folderId: string) => {
     const result = await getMediaFiles(folderId)
     setFiles(result as MediaFile[])
-    const urls: Record<string, string> = {}
-    await Promise.all(
-      (result as MediaFile[]).map(async (f) => {
-        try {
-          urls[f.id] = await getMediaFileUrl(f.id)
-        } catch {}
-      })
-    )
-    setThumbUrls(urls)
+    setLoadedIds(new Set())
+    setErrorIds(new Set())
   }, [])
 
   const openFolder = async (folder: Folder) => {
@@ -92,7 +88,9 @@ export function MediaFilesClient({ initialFolders }: { initialFolders: Folder[] 
     setCurrentFolderId(null)
     setCurrentFolder(null)
     setFiles([])
-    setThumbUrls({})
+    setLoadedIds(new Set())
+    setErrorIds(new Set())
+    setPreviewFile(null)
   }
 
   const handleCreateFolder = async () => {
@@ -167,13 +165,17 @@ export function MediaFilesClient({ initialFolders }: { initialFolders: Folder[] 
     }
   }
 
-  const handleOpenFile = async (file: MediaFile) => {
-    try {
-      const url = await getMediaFileUrl(file.id)
-      window.open(url, '_blank')
-    } catch {
-      addToast('Failed to open file', 'error')
-    }
+  const openPreview = (file: MediaFile) => {
+    setPreviewFile(file)
+  }
+
+  const downloadFile = (file: MediaFile) => {
+    const a = document.createElement('a')
+    a.href = `/media-files/file/${file.id}`
+    a.download = file.originalName || 'download'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
   }
 
   return (
@@ -308,49 +310,98 @@ export function MediaFilesClient({ initialFolders }: { initialFolders: Folder[] 
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {files.map((file) => {
-                const url = thumbUrls[file.id]
+                const url = `/media-files/file/${file.id}`
                 const video = isVideo(file.mimeType)
                 const image = isImage(file.mimeType)
+                const loaded = loadedIds.has(file.id)
+                const errored = errorIds.has(file.id)
                 return (
                   <div
                     key={file.id}
                     className="group relative overflow-hidden rounded-xl border border-border bg-surface"
                   >
                     <button
-                      onClick={() => handleOpenFile(file)}
+                      onClick={() => openPreview(file)}
                       className="block w-full aspect-square overflow-hidden bg-background/50"
+                      title="Click to preview"
                     >
-                      {url && image ? (
-                        <img
-                          src={url}
-                          alt={file.originalName}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      ) : url && video ? (
+                      {image ? (
+                        <>
+                          {!loaded && !errored && (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                          <img
+                            src={url}
+                            alt={file.originalName}
+                            loading="lazy"
+                            onLoad={() =>
+                              setLoadedIds((prev) => new Set(prev).add(file.id))
+                            }
+                            onError={() =>
+                              setErrorIds((prev) => new Set(prev).add(file.id))
+                            }
+                            className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                              loaded ? 'opacity-100' : 'opacity-0'
+                            }`}
+                          />
+                          {errored && (
+                            <div className="absolute inset-0 flex h-full w-full items-center justify-center">
+                              <FileImage className="h-8 w-8 text-muted-foreground opacity-40" />
+                            </div>
+                          )}
+                        </>
+                      ) : video ? (
                         <video
                           src={url}
                           className="h-full w-full object-cover"
                           muted
                           playsInline
                           preload="metadata"
+                          onLoadedData={() =>
+                            setLoadedIds((prev) => new Set(prev).add(file.id))
+                          }
+                          onError={() =>
+                            setErrorIds((prev) => new Set(prev).add(file.id))
+                          }
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
-                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                          <FileImage className="h-8 w-8 text-muted-foreground opacity-40" />
                         </div>
                       )}
                       {video && (
-                        <PlayCircle className="absolute inset-0 m-auto h-10 w-10 text-white/90 drop-shadow" />
+                        <PlayCircle className="absolute inset-0 m-auto h-10 w-10 text-white/90 drop-shadow pointer-events-none" />
                       )}
                     </button>
-                    <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                      <p className="truncate text-xs font-medium text-foreground">
+                    <div className="flex items-center justify-between gap-1 px-2 py-1.5">
+                      <p className="truncate text-xs font-medium text-foreground flex-1">
                         {file.originalName}
                       </p>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 flex-shrink-0"
+                        title="Preview"
+                        onClick={() => openPreview(file)}
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 flex-shrink-0"
+                        title="Download"
+                        onClick={() => downloadFile(file)}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 flex-shrink-0"
+                        title="Delete"
                         onClick={() => setDeletingFileId(file.id)}
                       >
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
@@ -439,6 +490,57 @@ export function MediaFilesClient({ initialFolders }: { initialFolders: Folder[] 
           </div>
         )}
       </Card>
+
+      {previewFile && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setPreviewFile(null)}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 text-white hover:bg-white/10"
+            onClick={() => setPreviewFile(null)}
+          >
+            <X className="w-5 h-5" />
+          </Button>
+          <div
+            className="flex max-h-[90vh] max-w-5xl flex-col items-center gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isImage(previewFile.mimeType) ? (
+              <img
+                src={`/media-files/file/${previewFile.id}`}
+                alt={previewFile.originalName}
+                className="max-h-[80vh] w-auto rounded-lg object-contain"
+              />
+            ) : isVideo(previewFile.mimeType) ? (
+              <video
+                src={`/media-files/file/${previewFile.id}`}
+                controls
+                autoPlay
+                className="max-h-[80vh] w-auto rounded-lg"
+              />
+            ) : (
+              <div className="rounded-lg bg-surface p-8 text-foreground">
+                Cannot preview this file type.
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-white/80">{previewFile.originalName}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-white/10 text-white border-white/20 hover:bg-white/20"
+                onClick={() => downloadFile(previewFile)}
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <MediaFilesUpload
         isOpen={isUploadOpen}
