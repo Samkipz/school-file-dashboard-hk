@@ -4,7 +4,7 @@ import { headers } from 'next/headers'
 import { db } from '@/lib/db'
 import { files } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getR2Object, r2StreamToWeb } from '@/lib/r2'
+import { getR2ObjectBytes } from '@/lib/r2'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,18 +29,15 @@ export async function GET(
 
   let object
   try {
-    object = await getR2Object(file.bucketPath)
+    object = await getR2ObjectBytes(file.bucketPath)
   } catch {
     return new Response('Not found', { status: 404 })
   }
 
-  const body = r2StreamToWeb(object.Body)
-  const contentType = object.ContentType || file.mimeType
-
-  return new Response(body, {
+  return new Response(object.bytes, {
     status: 200,
     headers: {
-      'Content-Type': contentType,
+      'Content-Type': object.contentType,
       'Cache-Control': 'private, max-age=3600',
     },
   })
