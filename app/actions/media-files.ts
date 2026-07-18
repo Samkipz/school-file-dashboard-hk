@@ -135,15 +135,18 @@ export async function uploadMediaFile(
   return storeFile(file, folderId, user.id, baseName)
 }
 
-export async function bulkUploadMedia(
-  filesList: File[],
-  folderId: string,
-  description?: string
-) {
+export async function bulkUploadMediaForm(formData: FormData) {
   const user = await requireUser()
+  const folderId = (formData.get('folderId') as string) || ''
+  if (!folderId) throw new Error('No folder selected')
+  const fileEntries = formData.getAll('files')
+  if (fileEntries.length === 0) throw new Error('No files provided')
+
   const inserted: UploadedFile[] = []
-  for (const file of filesList) {
-    inserted.push(await storeFile(file, folderId, user.id))
+  for (const entry of fileEntries) {
+    if (entry instanceof File) {
+      inserted.push(await storeFile(entry, folderId, user.id))
+    }
   }
   return inserted
 }

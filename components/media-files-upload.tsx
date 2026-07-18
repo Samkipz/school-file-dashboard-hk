@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Upload, X, FileImage, Loader2 } from 'lucide-react'
-import { bulkUploadMedia } from '@/app/actions/media-files'
+import { bulkUploadMediaForm } from '@/app/actions/media-files'
 
 type Folder = { id: string; name: string; description: string | null }
 
@@ -79,7 +79,16 @@ export function MediaFilesUpload({
         return
       }
 
-      await bulkUploadMedia(selectedFiles, targetFolderId, description.trim() || undefined)
+      const formData = new FormData()
+      formData.append('folderId', targetFolderId)
+      if (description.trim()) {
+        formData.append('description', description.trim())
+      }
+      for (const file of selectedFiles) {
+        formData.append('files', file)
+      }
+
+      await bulkUploadMediaForm(formData)
       onUploaded()
       onClose()
     } catch (err) {
