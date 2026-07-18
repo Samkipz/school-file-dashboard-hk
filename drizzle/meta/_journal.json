@@ -15,6 +15,13 @@
       "when": 1784310916038,
       "tag": "0001_cloudy_madame_web",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784362383863,
+      "tag": "0002_add_section",
+      "breakpoints": true
     }
   ]
 }

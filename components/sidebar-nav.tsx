@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, Bell, Layers, Calendar, LogOut, X } from 'lucide-react'
+import { LayoutDashboard, Users, Bell, Layers, Calendar, LogOut, X, Images } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 
@@ -23,6 +23,11 @@ const navItems = [
     label: 'Portfolios',
     href: '/portfolios',
     icon: Layers,
+  },
+  {
+    label: 'Media Files',
+    href: '/media-files',
+    icon: Images,
   },
   {
     label: 'Calendar',

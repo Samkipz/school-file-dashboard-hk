@@ -219,7 +219,7 @@ export function StaffResourcesClient({ initialFolders }: { initialFolders: Folde
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <FileText className="w-5 h-5 text-primary flex-shrink-0" />
-                    <div className="min-w-0">
+                    <div className="min-w-0 truncate">
                       <p className="font-medium text-foreground break-words">{file.originalName}</p>
                       <p className="text-sm text-muted-foreground">
                         {file.mimeType} · {(Number(file.size) / 1024).toFixed(1)} KB

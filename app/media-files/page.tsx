@@ -2,9 +2,8 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { AppLayout } from '@/components/app-layout'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Upload } from 'lucide-react'
+import { MediaFilesClient } from '@/components/media-files-client'
+import { getMediaFolders } from '@/app/actions/media-files'
 
 export default async function MediaFilesPage() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -12,25 +11,19 @@ export default async function MediaFilesPage() {
     redirect('/sign-in')
   }
 
+  const folders = await getMediaFolders()
+
   return (
     <AppLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground">Media Files</h1>
-          <p className="text-muted-foreground mt-2">Browse and manage school media and images</p>
+          <p className="text-muted-foreground mt-2">
+            Browse and manage school photos and videos
+          </p>
         </div>
 
-        <Button className="gap-2 mb-6">
-          <Upload className="w-4 h-4" />
-          Upload Media
-        </Button>
-
-        <Card className="p-12 text-center bg-card border-border">
-          <div className="text-muted-foreground">
-            <p className="text-lg font-medium mb-2">No media files yet</p>
-            <p className="text-sm">Upload media to get started</p>
-          </div>
-        </Card>
+        <MediaFilesClient initialFolders={folders} />
       </div>
     </AppLayout>
   )

@@ -84,6 +84,7 @@ export const folders = pgTable('folders', {
   parentFolderId: text('parentFolderId'),
   name: text('name').notNull(),
   description: text('description'),
+  section: text('section').notNull().default('staff'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
@@ -98,6 +99,7 @@ export const files = pgTable('files', {
   uploadedAt: timestamp('uploadedAt').notNull().defaultNow(),
   bucketPath: text('bucketPath').notNull(),
   folderId: text('folderId').notNull(),
+  section: text('section').notNull().default('staff'),
 })
 
 export const announcements = pgTable('announcements', {

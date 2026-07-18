@@ -8,31 +8,35 @@ import { eq, and, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { uploadToR2, deleteFromR2 } from '@/lib/r2'
 
-const SECTION = 'staff'
+const MEDIA_PREFIX = 'media'
+const SECTION = 'media'
 
-async function getUserId() {
+async function requireUser() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
-  return session.user.id
+  return session.user
 }
 
-export async function getRootFolders() {
-  return db.select().from(folders).where(eq(folders.section, SECTION)).orderBy(folders.name)
+export async function getMediaFolders() {
+  return db
+    .select()
+    .from(folders)
+    .where(eq(folders.section, SECTION))
+    .orderBy(folders.name)
 }
 
-export async function createFolder(name: string) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Unauthorized')
+export async function createMediaFolder(name: string, description?: string) {
+  const user = await requireUser()
   const id = randomUUID()
   const now = new Date()
   const [folder] = await db
     .insert(folders)
     .values({
       id,
-      userId: session.user.id,
+      userId: user.id,
       name: name.trim(),
+      description: description?.trim() || null,
       parentFolderId: null,
-      description: null,
       section: SECTION,
       createdAt: now,
       updatedAt: now,
@@ -41,27 +45,22 @@ export async function createFolder(name: string) {
   return folder
 }
 
-export async function renameFolder(folderId: string, name: string) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Unauthorized')
+export async function updateMediaFolder(
+  folderId: string,
+  name: string,
+  description?: string
+) {
+  await requireUser()
   const [folder] = await db
     .update(folders)
-    .set({ name: name.trim(), updatedAt: new Date() })
-    .where(eq(folders.id, folderId))
+    .set({ name: name.trim(), description: description?.trim() || null, updatedAt: new Date() })
+    .where(and(eq(folders.id, folderId), eq(folders.section, SECTION)))
     .returning()
   return folder
 }
 
-export async function deleteFolder(folderId: string) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Unauthorized')
-
-  const [folder] = await db
-    .select()
-    .from(folders)
-    .where(and(eq(folders.id, folderId), eq(folders.section, SECTION)))
-  if (!folder) throw new Error('Folder not found')
-
+export async function deleteMediaFolder(folderId: string) {
+  await requireUser()
   const folderFiles = await db
     .select()
     .from(files)
@@ -71,7 +70,6 @@ export async function deleteFolder(folderId: string) {
       await deleteFromR2(file.bucketPath)
     } catch {}
   }
-
   await db
     .delete(files)
     .where(and(eq(files.folderId, folderId), eq(files.section, SECTION)))
@@ -81,7 +79,7 @@ export async function deleteFolder(folderId: string) {
   return { success: true }
 }
 
-export async function getFilesInFolder(folderId: string) {
+export async function getMediaFiles(folderId: string) {
   return db
     .select()
     .from(files)
@@ -89,19 +87,20 @@ export async function getFilesInFolder(folderId: string) {
     .orderBy(desc(files.uploadedAt))
 }
 
-export async function uploadFile(formData: FormData, folderId: string) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Unauthorized')
-  const file = formData.get('file') as File | null
-  const rawFileName = (formData.get('fileName') as string) || file?.name || 'untitled'
-  const fileName = rawFileName.replace(/\.[^/.]+$/, '')
+type UploadedFile = typeof files.$inferSelect
 
-  if (!file) throw new Error('No file provided')
-
+async function storeFile(
+  file: File,
+  folderId: string,
+  uploadedBy: string,
+  baseName?: string
+): Promise<UploadedFile> {
+  const rawFileName = baseName || file.name || 'untitled'
   const id = randomUUID()
-  const ext = file.name.split('.').pop()
-  const storedFilename = `${id}-${fileName.replace(/[^a-zA-Z0-9_-]/g, '_')}.${ext}`
-  const bucketPath = `uploads/${storedFilename}`
+  const ext = file.name.split('.').pop() || 'bin'
+  const safeName = rawFileName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_')
+  const storedFilename = `${id}-${safeName}.${ext}`
+  const bucketPath = `${MEDIA_PREFIX}/${storedFilename}`
   const bytes = Buffer.from(await file.arrayBuffer())
 
   await uploadToR2(bucketPath, bytes, file.type || 'application/octet-stream')
@@ -114,7 +113,7 @@ export async function uploadFile(formData: FormData, folderId: string) {
       originalName: rawFileName,
       mimeType: file.type || 'application/octet-stream',
       size: file.size,
-      uploadedBy: session.user.id,
+      uploadedBy,
       bucketPath,
       folderId,
       section: SECTION,
@@ -124,32 +123,52 @@ export async function uploadFile(formData: FormData, folderId: string) {
   return inserted
 }
 
-export async function deleteFile(id: string) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Unauthorized')
+export async function uploadMediaFile(
+  formData: FormData,
+  folderId: string,
+  description?: string
+) {
+  const user = await requireUser()
+  const file = formData.get('file') as File | null
+  if (!file) throw new Error('No file provided')
+  const baseName = (formData.get('fileName') as string) || undefined
+  return storeFile(file, folderId, user.id, baseName)
+}
+
+export async function bulkUploadMedia(
+  filesList: File[],
+  folderId: string,
+  description?: string
+) {
+  const user = await requireUser()
+  const inserted: UploadedFile[] = []
+  for (const file of filesList) {
+    inserted.push(await storeFile(file, folderId, user.id))
+  }
+  return inserted
+}
+
+export async function deleteMediaFile(id: string) {
+  await requireUser()
   const [file] = await db
     .select()
     .from(files)
     .where(and(eq(files.id, id), eq(files.section, SECTION)))
   if (!file) throw new Error('File not found')
-
   try {
     await deleteFromR2(file.bucketPath)
   } catch {}
-
   await db.delete(files).where(and(eq(files.id, id), eq(files.section, SECTION)))
   return { success: true }
 }
 
-export async function getFileUrl(id: string) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) throw new Error('Unauthorized')
+export async function getMediaFileUrl(id: string) {
+  await requireUser()
   const [file] = await db
     .select()
     .from(files)
     .where(and(eq(files.id, id), eq(files.section, SECTION)))
   if (!file) throw new Error('File not found')
-
   const { getR2PresignedUrl } = await import('@/lib/r2')
   return getR2PresignedUrl(file.bucketPath, 3600)
 }
