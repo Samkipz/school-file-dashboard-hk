@@ -7,6 +7,7 @@ import { students, portfolioFiles } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { uploadToR2, deleteFromR2 } from '@/lib/r2'
+import { logActivity, ActionType } from '@/lib/activity'
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -38,6 +39,12 @@ export async function createStudent(name: string, className: string) {
       updatedAt: now,
     })
     .returning()
+  await logActivity({
+    actionType: ActionType.STUDENT_CREATE,
+    description: `Added student "${name.trim()}"`,
+    targetId: student.id,
+    targetType: 'student',
+  })
   return student
 }
 
@@ -48,11 +55,20 @@ export async function updateStudent(id: string, name: string, className: string)
     .set({ name: name.trim(), className: className.trim(), updatedAt: new Date() })
     .where(eq(students.id, id))
     .returning()
+  await logActivity({
+    actionType: ActionType.STUDENT_UPDATE,
+    description: `Updated student "${name.trim()}"`,
+    targetId: student.id,
+    targetType: 'student',
+  })
   return student
 }
 
 export async function deleteStudent(id: string) {
   const session = await requireSession()
+
+  const [student] = await db.select().from(students).where(eq(students.id, id))
+  const studentName = student?.name || 'Unknown'
 
   const studentFiles = await db
     .select()
@@ -66,6 +82,12 @@ export async function deleteStudent(id: string) {
 
   await db.delete(portfolioFiles).where(eq(portfolioFiles.studentId, id))
   await db.delete(students).where(eq(students.id, id))
+  await logActivity({
+    actionType: ActionType.STUDENT_DELETE,
+    description: `Deleted student "${studentName}"`,
+    targetId: id,
+    targetType: 'student',
+  })
   return { success: true }
 }
 
@@ -121,6 +143,13 @@ export async function uploadPortfolioFile(formData: FormData, studentId: string)
     })
     .returning()
 
+  await logActivity({
+    actionType: ActionType.PORTFOLIO_FILE_UPLOAD,
+    description: `Uploaded portfolio file "${rawFileName}"`,
+    targetId: inserted.id,
+    targetType: 'portfolioFile',
+  })
+
   return inserted
 }
 
@@ -140,6 +169,12 @@ export async function deletePortfolioFile(id: string) {
   } catch {}
 
   await db.delete(portfolioFiles).where(eq(portfolioFiles.id, id))
+  await logActivity({
+    actionType: ActionType.PORTFOLIO_FILE_DELETE,
+    description: `Deleted portfolio file "${file.originalName}"`,
+    targetId: id,
+    targetType: 'portfolioFile',
+  })
   return { success: true }
 }
 

@@ -7,6 +7,7 @@ import { folders, files } from '@/lib/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { uploadToR2, deleteFromR2 } from '@/lib/r2'
+import { logActivity, ActionType } from '@/lib/activity'
 
 const MEDIA_PREFIX = 'media'
 const SECTION = 'media'
@@ -42,6 +43,12 @@ export async function createMediaFolder(name: string, description?: string) {
       updatedAt: now,
     })
     .returning()
+  await logActivity({
+    actionType: ActionType.MEDIA_FOLDER_CREATE,
+    description: `Created media folder "${name.trim()}"`,
+    targetId: folder.id,
+    targetType: 'mediaFolder',
+  })
   return folder
 }
 
@@ -56,11 +63,23 @@ export async function updateMediaFolder(
     .set({ name: name.trim(), description: description?.trim() || null, updatedAt: new Date() })
     .where(and(eq(folders.id, folderId), eq(folders.section, SECTION)))
     .returning()
+  await logActivity({
+    actionType: ActionType.MEDIA_FOLDER_UPDATE,
+    description: `Renamed media folder to "${name.trim()}"`,
+    targetId: folder.id,
+    targetType: 'mediaFolder',
+  })
   return folder
 }
 
 export async function deleteMediaFolder(folderId: string) {
   await requireUser()
+  const [folder] = await db
+    .select()
+    .from(folders)
+    .where(and(eq(folders.id, folderId), eq(folders.section, SECTION)))
+  const folderName = folder?.name || 'Unknown'
+
   const folderFiles = await db
     .select()
     .from(files)
@@ -76,6 +95,12 @@ export async function deleteMediaFolder(folderId: string) {
   await db
     .delete(folders)
     .where(and(eq(folders.id, folderId), eq(folders.section, SECTION)))
+  await logActivity({
+    actionType: ActionType.MEDIA_FOLDER_DELETE,
+    description: `Deleted media folder "${folderName}"`,
+    targetId: folderId,
+    targetType: 'mediaFolder',
+  })
   return { success: true }
 }
 
@@ -148,6 +173,16 @@ export async function bulkUploadMediaForm(formData: FormData) {
       inserted.push(await storeFile(entry, folderId, user.id))
     }
   }
+
+  if (inserted.length > 0) {
+    await logActivity({
+      actionType: ActionType.MEDIA_UPLOAD,
+      description: `Uploaded ${inserted.length} media file${inserted.length > 1 ? 's' : ''}`,
+      targetId: folderId,
+      targetType: 'mediaFolder',
+    })
+  }
+
   return inserted
 }
 
@@ -162,6 +197,12 @@ export async function deleteMediaFile(id: string) {
     await deleteFromR2(file.bucketPath)
   } catch {}
   await db.delete(files).where(and(eq(files.id, id), eq(files.section, SECTION)))
+  await logActivity({
+    actionType: ActionType.MEDIA_DELETE,
+    description: `Deleted media file "${file.originalName}"`,
+    targetId: id,
+    targetType: 'mediaFile',
+  })
   return { success: true }
 }
 

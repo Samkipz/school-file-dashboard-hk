@@ -7,6 +7,7 @@ import { folders, files } from '@/lib/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { uploadToR2, deleteFromR2 } from '@/lib/r2'
+import { logActivity, ActionType } from '@/lib/activity'
 
 const SECTION = 'staff'
 
@@ -38,6 +39,12 @@ export async function createFolder(name: string) {
       updatedAt: now,
     })
     .returning()
+  await logActivity({
+    actionType: ActionType.STAFF_FOLDER_CREATE,
+    description: `Created staff folder "${name.trim()}"`,
+    targetId: folder.id,
+    targetType: 'staffFolder',
+  })
   return folder
 }
 
@@ -49,6 +56,12 @@ export async function renameFolder(folderId: string, name: string) {
     .set({ name: name.trim(), updatedAt: new Date() })
     .where(eq(folders.id, folderId))
     .returning()
+  await logActivity({
+    actionType: ActionType.STAFF_FOLDER_RENAME,
+    description: `Renamed staff folder to "${name.trim()}"`,
+    targetId: folder.id,
+    targetType: 'staffFolder',
+  })
   return folder
 }
 
@@ -78,6 +91,12 @@ export async function deleteFolder(folderId: string) {
   await db
     .delete(folders)
     .where(and(eq(folders.id, folderId), eq(folders.section, SECTION)))
+  await logActivity({
+    actionType: ActionType.STAFF_FOLDER_DELETE,
+    description: `Deleted staff folder "${folder.name}"`,
+    targetId: folderId,
+    targetType: 'staffFolder',
+  })
   return { success: true }
 }
 
@@ -121,6 +140,13 @@ export async function uploadFile(formData: FormData, folderId: string) {
     })
     .returning()
 
+  await logActivity({
+    actionType: ActionType.STAFF_FILE_UPLOAD,
+    description: `Uploaded staff file "${rawFileName}"`,
+    targetId: inserted.id,
+    targetType: 'staffFile',
+  })
+
   return inserted
 }
 
@@ -138,6 +164,12 @@ export async function deleteFile(id: string) {
   } catch {}
 
   await db.delete(files).where(and(eq(files.id, id), eq(files.section, SECTION)))
+  await logActivity({
+    actionType: ActionType.STAFF_FILE_DELETE,
+    description: `Deleted staff file "${file.originalName}"`,
+    targetId: id,
+    targetType: 'staffFile',
+  })
   return { success: true }
 }
 

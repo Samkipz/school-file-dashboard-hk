@@ -2,14 +2,26 @@
 
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { announcements, events, activityLogs } from '@/lib/db/schema'
+import { announcements, activityLogs } from '@/lib/db/schema'
 import { desc, eq, gte } from 'drizzle-orm'
 import { headers } from 'next/headers'
+import { getEvents } from './calendar'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   return session.user.id
+}
+
+export async function getUpcomingEvents(limit = 5) {
+  const userId = await getUserId()
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const allEvents = await getEvents(year, month)
+  return allEvents
+    .filter((e) => new Date(e.eventDate) >= now)
+    .slice(0, limit)
 }
 
 export async function getLatestActivities(limit = 10) {
@@ -29,17 +41,6 @@ export async function getLatestAnnouncements(limit = 5) {
     .from(announcements)
     .where(eq(announcements.userId, userId))
     .orderBy(desc(announcements.createdAt))
-    .limit(limit)
-}
-
-export async function getUpcomingEvents(limit = 5) {
-  const userId = await getUserId()
-  const now = new Date()
-  return db
-    .select()
-    .from(events)
-    .where(gte(events.eventDate, now))
-    .orderBy(events.eventDate)
     .limit(limit)
 }
 

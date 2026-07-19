@@ -7,7 +7,9 @@ interface Event {
   title: string
   description?: string | null
   eventDate: Date | string
+  endDate?: Date | string
   location?: string | null
+  color?: string
   createdAt: Date | string
 }
 
@@ -41,25 +43,14 @@ export function EventsSection({ events }: { events: Event[] }) {
                     : 'bg-accent/30 border-border hover:bg-accent/50'
               }`}
             >
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div
-                  className={`w-full sm:w-12 h-12 sm:h-12 rounded-lg flex flex-row sm:flex-col items-center justify-center text-xs font-semibold flex-shrink-0 ${
-                    isToday
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
-                      : isSoon
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-100'
-                        : 'bg-primary/10 text-primary'
-                  }`}
-                >
-                  <span>{format(eventDate, 'd')}</span>
-                  <span className="text-xs">{format(eventDate, 'MMM')}</span>
-                </div>
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: event.color || '#3b82f6' }} />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-foreground text-sm line-clamp-1">{event.title}</h3>
                   <div className="space-y-1 mt-2">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Calendar className="w-3 h-3" />
-                      <span>{format(eventDate, 'HH:mm')}</span>
+                      <span>{format(eventDate, 'MMM d, yyyy HH:mm')}</span>
                     </div>
                     {event.location && (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
