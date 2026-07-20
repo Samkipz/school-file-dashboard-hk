@@ -223,45 +223,40 @@ export function CalendarClient({ initialEvents }: { initialEvents: Event[] }) {
             const dayStr = isPadding ? '' : format(day, 'yyyy-MM-dd')
             const dayEvents = isPadding ? [] : (eventsByDate.get(dayStr) || [])
             const today = !isPadding && isToday(day)
+            const cellColor = dayEvents.length > 0 ? (dayEvents[0].color || '#3b82f6') : null
 
             return (
               <button
                 key={idx}
                 onClick={() => !isPadding && handleDayClick(day)}
                 className={`
-                  relative min-h-[80px] sm:min-h-[100px] p-1.5 sm:p-2 bg-background transition-colors
-                  hover:bg-accent/50 flex flex-col items-start justify-start gap-1
+                  relative min-h-[80px] sm:min-h-[100px] p-1.5 sm:p-2 transition-colors flex flex-col items-start justify-start gap-1
                   ${isPadding ? 'bg-muted/30 cursor-default' : ''}
+                  ${cellColor ? `text-white` : 'bg-background hover:bg-accent/50 text-foreground'}
                 `}
+                style={cellColor ? { backgroundColor: cellColor } : undefined}
               >
                 <span
                   className={`
                     text-xs sm:text-sm font-medium inline-flex items-center justify-center size-6 sm:size-7 rounded-full
-                    ${today ? 'bg-primary text-primary-foreground' : 'text-foreground'}
+                    ${today ? 'ring-2 ring-white/50' : ''}
+                    ${cellColor ? 'text-white/90' : 'text-foreground'}
                   `}
                 >
                   {isPadding ? '' : format(day, 'd')}
                 </span>
                 <div className="flex flex-col gap-0.5 w-full mt-1">
-                  {dayEvents.slice(0, 3).map((ev) => {
-                    const evColor = ev.color || '#3b82f6'
-                    return (
-                      <div
-                        key={ev.id}
-                        onClick={(e) => handleEventClick(e, { ...ev, color: evColor })}
-                        className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded truncate cursor-pointer"
-                        style={{
-                          backgroundColor: evColor + '20',
-                          color: evColor,
-                          borderLeft: `2px solid ${evColor}`,
-                        }}
-                      >
-                        {format(parseISO(ev.eventDate.toISOString()), 'HH:mm')} {ev.title}
-                      </div>
-                    )
-                  })}
+                  {dayEvents.slice(0, 3).map((ev) => (
+                    <div
+                      key={ev.id}
+                      onClick={(e) => handleEventClick(e, ev)}
+                      className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded truncate cursor-pointer bg-white/15 hover:bg-white/25"
+                    >
+                      {format(parseISO(ev.eventDate.toISOString()), 'HH:mm')} {ev.title}
+                    </div>
+                  ))}
                   {dayEvents.length > 3 && (
-                    <span className="text-[10px] text-muted-foreground px-1">
+                    <span className="text-[10px] text-white/70 px-1">
                       +{dayEvents.length - 3} more
                     </span>
                   )}
