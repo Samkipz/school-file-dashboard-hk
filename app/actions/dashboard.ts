@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { announcements, activityLogs } from '@/lib/db/schema'
+import { activityLogs } from '@/lib/db/schema'
 import { desc, eq, gte } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { getEvents } from './calendar'
@@ -31,16 +31,6 @@ export async function getLatestActivities(limit = 10) {
     .from(activityLogs)
     .where(eq(activityLogs.userId, userId))
     .orderBy(desc(activityLogs.createdAt))
-    .limit(limit)
-}
-
-export async function getLatestAnnouncements(limit = 5) {
-  const userId = await getUserId()
-  return db
-    .select()
-    .from(announcements)
-    .where(eq(announcements.userId, userId))
-    .orderBy(desc(announcements.createdAt))
     .limit(limit)
 }
 

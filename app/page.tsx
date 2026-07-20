@@ -3,9 +3,8 @@ import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { AppLayout } from '@/components/app-layout'
 import { ActivityFeed } from '@/components/activity-feed'
-import { AnnouncementsSection } from '@/components/announcements-section'
 import { EventsSection } from '@/components/events-section'
-import { getLatestActivities, getLatestAnnouncements, getUpcomingEvents, getUserInfo } from '@/app/actions/dashboard'
+import { getLatestActivities, getUpcomingEvents, getUserInfo } from '@/app/actions/dashboard'
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -13,9 +12,8 @@ export default async function DashboardPage() {
     redirect('/sign-in')
   }
 
-  const [activities, announcements, events, user] = await Promise.all([
+  const [activities, events, user] = await Promise.all([
     getLatestActivities(10),
-    getLatestAnnouncements(5),
     getUpcomingEvents(5),
     getUserInfo(),
   ])
@@ -30,16 +28,9 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground mt-2">Here&apos;s what&apos;s happening in your school</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <ActivityFeed activities={activities} user={user} />
-          </div>
-          <div className="lg:col-span-1">
-            <AnnouncementsSection announcements={announcements} />
-          </div>
-          <div className="lg:col-span-1">
-            <EventsSection events={events} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ActivityFeed activities={activities} user={user} />
+          <EventsSection events={events} />
         </div>
       </div>
     </AppLayout>
