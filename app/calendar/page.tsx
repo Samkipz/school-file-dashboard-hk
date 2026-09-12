@@ -1,3 +1,5 @@
+import { DeferredFeature } from '@/components/deferred-feature'
+import { legacyUnavailable } from '@/lib/legacy-boundary'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
@@ -6,6 +8,8 @@ import { CalendarClient } from '@/components/calendar-client'
 import { getEvents } from '@/app/actions/calendar'
 
 export default async function CalendarPage() {
+  if (legacyUnavailable()) return <DeferredFeature />
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) {
     redirect('/sign-in')
@@ -22,7 +26,7 @@ export default async function CalendarPage() {
           <p className="text-muted-foreground mt-2">View and manage your school events</p>
         </div>
 
-        <CalendarClient initialEvents={initialEvents as any} />
+        <CalendarClient initialEvents={initialEvents} />
       </div>
     </AppLayout>
   )

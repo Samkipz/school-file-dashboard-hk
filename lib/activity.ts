@@ -1,7 +1,8 @@
+import { rejectLegacyOperation } from '@/lib/legacy-boundary'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { db } from '@/lib/db'
-import { activityLogs } from '@/lib/db/schema'
+import { activityLogs } from '@/lib/db/legacy-schema'
 import { randomUUID } from 'crypto'
 
 export const ActionType = {
@@ -42,6 +43,7 @@ export async function logActivity(params: {
   targetId?: string
   targetType?: string
 }) {
+  await rejectLegacyOperation()
   const userId = await getUserId()
   await db.insert(activityLogs).values({
     id: randomUUID(),

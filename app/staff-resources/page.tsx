@@ -1,3 +1,5 @@
+import { DeferredFeature } from '@/components/deferred-feature'
+import { legacyUnavailable } from '@/lib/legacy-boundary'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
@@ -6,6 +8,8 @@ import { StaffResourcesClient } from '@/components/staff-resources-client'
 import { getRootFolders } from '@/app/actions/staff-resources'
 
 export default async function StaffResourcesPage() {
+  if (legacyUnavailable()) return <DeferredFeature />
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) {
     redirect('/sign-in')

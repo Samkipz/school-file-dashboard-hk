@@ -1,9 +1,11 @@
 'use server'
 
+import { legacyEmptyRead, rejectLegacyOperation } from '@/lib/legacy-boundary'
+
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { db } from '@/lib/db'
-import { folders, files } from '@/lib/db/schema'
+import { folders, files } from '@/lib/db/legacy-schema'
 import { eq, and, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { uploadToR2, deleteFromR2 } from '@/lib/r2'
@@ -18,10 +20,14 @@ async function getUserId() {
 }
 
 export async function getRootFolders() {
+  if (await legacyEmptyRead()) return []
+
   return db.select().from(folders).where(eq(folders.section, SECTION)).orderBy(folders.name)
 }
 
 export async function createFolder(name: string) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   const id = randomUUID()
@@ -49,6 +55,8 @@ export async function createFolder(name: string) {
 }
 
 export async function renameFolder(folderId: string, name: string) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   const [folder] = await db
@@ -66,6 +74,8 @@ export async function renameFolder(folderId: string, name: string) {
 }
 
 export async function deleteFolder(folderId: string) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
 
@@ -101,6 +111,8 @@ export async function deleteFolder(folderId: string) {
 }
 
 export async function getFilesInFolder(folderId: string) {
+  if (await legacyEmptyRead()) return []
+
   return db
     .select()
     .from(files)
@@ -109,6 +121,8 @@ export async function getFilesInFolder(folderId: string) {
 }
 
 export async function uploadFile(formData: FormData, folderId: string) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   const file = formData.get('file') as File | null
@@ -151,6 +165,8 @@ export async function uploadFile(formData: FormData, folderId: string) {
 }
 
 export async function deleteFile(id: string) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   const [file] = await db
@@ -174,6 +190,8 @@ export async function deleteFile(id: string) {
 }
 
 export async function getFileUrl(id: string) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   const [file] = await db

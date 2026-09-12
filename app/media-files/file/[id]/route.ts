@@ -1,44 +1,16 @@
-import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
-import { headers } from 'next/headers'
-import { db } from '@/lib/db'
-import { files } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
-import { getR2ObjectBytes } from '@/lib/r2'
-
+import { schoolFiles } from '@/lib/domain/server'
+import { DomainError } from '@/lib/domain/foundation'
 export const dynamic = 'force-dynamic'
-
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
-  const { id } = await params
-  const [file] = await db
-    .select()
-    .from(files)
-    .where(and(eq(files.id, id), eq(files.section, 'media')))
-
-  if (!file) {
-    return new Response('Not found', { status: 404 })
-  }
-
-  let object
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const headers = { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox", 'Cross-Origin-Resource-Policy': 'same-origin' }
   try {
-    object = await getR2ObjectBytes(file.bucketPath)
-  } catch {
-    return new Response('Not found', { status: 404 })
+    const url = new URL(request.url)
+    const file = await schoolFiles.download(url.searchParams.get('school') ?? '', (await params).id)
+    const inline = url.searchParams.get('view') === '1' && /^(image\/(png|jpeg|webp)|video\/mp4)$/.test(file.mimeType)
+    return new Response(new Uint8Array(file.bytes), { headers: { ...headers, 'Content-Type': file.mimeType, 'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${file.name.replace(/[^a-zA-Z0-9._ -]/g,'_')}"` } })
+  } catch (error) {
+    const status = error instanceof DomainError ? ({ UNAUTHORIZED: 401, FORBIDDEN: 403, NOT_FOUND: 404, INVALID_INPUT: 400, CONFLICT: 409 })[error.code] : 503
+    if (!(error instanceof DomainError)) console.error('Private file download failed')
+    return new Response('File unavailable', { status, headers })
   }
-
-  return new Response(object.bytes, {
-    status: 200,
-    headers: {
-      'Content-Type': object.contentType,
-      'Cache-Control': 'private, max-age=3600',
-    },
-  })
 }

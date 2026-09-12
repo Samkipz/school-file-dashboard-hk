@@ -49,9 +49,7 @@ export function ActivityFeed({ activities, user }: { activities: Activity[]; use
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedActivities = (activities || []).slice(startIndex, startIndex + itemsPerPage)
 
-  React.useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(1)
-  }, [currentPage, totalPages])
+  if (currentPage > totalPages) setCurrentPage(1)
 
   if (!activities || activities.length === 0) {
     return (

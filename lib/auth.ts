@@ -26,31 +26,15 @@ export const auth = betterAuth({
   },
   trustedOrigins: [
     ...(origins || []),
-    // Add broader patterns for development
-    ...(process.env.NODE_ENV === 'development' 
-      ? ['localhost', '127.0.0.1', '*']
-      : []),
   ],
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
   },
   advanced: {
-    // Skip origin check in development for v0 preview iframe compatibility
-    skipOriginCheck: process.env.NODE_ENV === 'development',
-    // Trust proxy headers (important for iframe/reverse proxy scenarios)
-    trustProxy: process.env.NODE_ENV === 'development',
-    // In dev (v0 preview iframe), force cross-site cookies so the
-    // session cookie is stored by the browser.
-    defaultCookieAttributes:
-      process.env.NODE_ENV === 'development'
-        ? {
-            sameSite: 'none' as const,
-            secure: true,
-          }
-        : {
-            sameSite: 'lax' as const,
-            secure: true,
-          },
+    defaultCookieAttributes: {
+      sameSite: 'lax' as const,
+      secure: new URL(baseUrl).protocol === 'https:',
+    },
   },
 })

@@ -1,9 +1,11 @@
 'use server'
 
+import { legacyEmptyRead, rejectLegacyOperation } from '@/lib/legacy-boundary'
+
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { db } from '@/lib/db'
-import { announcements } from '@/lib/db/schema'
+import { announcements } from '@/lib/db/legacy-schema'
 import { eq, desc, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { logActivity, ActionType } from '@/lib/activity'
@@ -15,6 +17,8 @@ async function requireUser() {
 }
 
 export async function getLatestAnnouncements(limit = 50) {
+  if (await legacyEmptyRead()) return []
+
   const user = await requireUser()
   return db
     .select()
@@ -25,6 +29,8 @@ export async function getLatestAnnouncements(limit = 50) {
 }
 
 export async function createAnnouncement(title: string, content: string, category = 'general') {
+  await rejectLegacyOperation()
+
   const user = await requireUser()
   const id = randomUUID()
   const now = new Date()
@@ -50,6 +56,8 @@ export async function createAnnouncement(title: string, content: string, categor
 }
 
 export async function updateAnnouncement(id: string, title: string, content: string, category: string) {
+  await rejectLegacyOperation()
+
   const user = await requireUser()
   const [announcement] = await db
     .update(announcements)
@@ -66,6 +74,8 @@ export async function updateAnnouncement(id: string, title: string, content: str
 }
 
 export async function deleteAnnouncement(id: string) {
+  await rejectLegacyOperation()
+
   const user = await requireUser()
   const [announcement] = await db.select().from(announcements).where(and(eq(announcements.id, id), eq(announcements.userId, user.id)))
   if (!announcement) throw new Error('Announcement not found')

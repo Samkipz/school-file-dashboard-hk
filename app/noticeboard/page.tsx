@@ -1,3 +1,5 @@
+import { DeferredFeature } from '@/components/deferred-feature'
+import { legacyUnavailable } from '@/lib/legacy-boundary'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
@@ -7,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 
 export default async function NoticeboardPage() {
+  if (legacyUnavailable()) return <DeferredFeature />
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) {
     redirect('/sign-in')

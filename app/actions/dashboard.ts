@@ -1,8 +1,10 @@
 'use server'
 
+import { legacyEmptyRead } from '@/lib/legacy-boundary'
+
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { activityLogs } from '@/lib/db/schema'
+import { activityLogs } from '@/lib/db/legacy-schema'
 import { desc, eq, gte } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { getEvents } from './calendar'
@@ -14,6 +16,8 @@ async function getUserId() {
 }
 
 export async function getUpcomingEvents(limit = 5) {
+  if (await legacyEmptyRead()) return []
+
   const userId = await getUserId()
   const now = new Date()
   const year = now.getFullYear()
@@ -25,6 +29,8 @@ export async function getUpcomingEvents(limit = 5) {
 }
 
 export async function getLatestActivities(limit = 10) {
+  if (await legacyEmptyRead()) return []
+
   const userId = await getUserId()
   return db
     .select()

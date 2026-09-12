@@ -1,9 +1,11 @@
 'use server'
 
+import { legacyEmptyRead, rejectLegacyOperation } from '@/lib/legacy-boundary'
+
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { db } from '@/lib/db'
-import { events } from '@/lib/db/schema'
+import { events } from '@/lib/db/legacy-schema'
 import { eq, gte, lte, and, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { logActivity, ActionType } from '@/lib/activity'
@@ -15,6 +17,8 @@ async function getUserId() {
 }
 
 export async function getEvents(year: number, month: number) {
+  if (await legacyEmptyRead()) return []
+
   const userId = await getUserId()
   const start = new Date(year, month, 1)
   const end = new Date(year, month + 1, 0, 23, 59, 59, 999)
@@ -32,6 +36,8 @@ export async function getEvents(year: number, month: number) {
 }
 
 export async function getUpcomingEvents(limit = 5) {
+  if (await legacyEmptyRead()) return []
+
   const userId = await getUserId()
   const now = new Date()
   return db
@@ -48,6 +54,8 @@ export async function createEvent(data: {
   eventDate: Date
   location?: string
 }) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   const id = randomUUID()
@@ -83,6 +91,8 @@ export async function updateEvent(
     location?: string
   },
 ) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   const [event] = await db
@@ -106,6 +116,8 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(id: string) {
+  await rejectLegacyOperation()
+
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) throw new Error('Unauthorized')
   const [event] = await db

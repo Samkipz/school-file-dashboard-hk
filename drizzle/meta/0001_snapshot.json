@@ -1,9 +1,183 @@
 {
-  "id": "2169f77a-0724-436b-b2cf-cbd5a635f479",
-  "prevId": "84a3bff3-893a-44ad-ac58-157853d109a0",
+  "id": "dce02e94-c3fd-4d8e-8b04-5c1dde637ee4",
+  "prevId": "da7288e6-d88f-45d7-9f96-8096f5f5c501",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.academic_years": {
+      "name": "academic_years",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        }
+      },
+      "indexes": {
+        "year_start_idx": {
+          "name": "year_start_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "starts_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "academic_years_school_id_schools_id_fk": {
+          "name": "academic_years_school_id_schools_id_fk",
+          "tableFrom": "academic_years",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "academic_years_created_by_actor_id_audit_actors_id_fk": {
+          "name": "academic_years_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "academic_years",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "academic_years_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "academic_years_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "academic_years",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "academic_years_school_id_id_unique": {
+          "name": "academic_years_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "academic_years_school_id_code_unique": {
+          "name": "academic_years_school_id_code_unique",
+          "columns": [
+            "school_id",
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "year_dates": {
+          "name": "year_dates",
+          "value": "\"academic_years\".\"ends_on\" is null or \"academic_years\".\"ends_on\" >= \"academic_years\".\"starts_on\""
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.account": {
       "name": "account",
       "schema": "",
@@ -94,15 +268,15 @@
         "account_userId_user_id_fk": {
           "name": "account_userId_user_id_fk",
           "tableFrom": "account",
-          "tableTo": "user",
           "columnsFrom": [
             "userId"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -111,372 +285,2842 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.activity_logs": {
-      "name": "activity_logs",
+    "public.audit_actors": {
+      "name": "audit_actors",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "userId": {
-          "name": "userId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "actionType": {
-          "name": "actionType",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "targetId": {
-          "name": "targetId",
-          "type": "text",
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
-        "targetType": {
-          "name": "targetType",
-          "type": "text",
+        "kind": {
+          "name": "kind",
+          "type": "varchar(16)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
+        "actor_code": {
+          "name": "actor_code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.announcements": {
-      "name": "announcements",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "userId": {
-          "name": "userId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "category": {
-          "name": "category",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'general'"
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+      "indexes": {
+        "actor_user_unique": {
+          "name": "actor_user_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"audit_actors\".\"user_id\" is not null",
+          "concurrently": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "audit_actors_user_id_user_id_fk": {
+          "name": "audit_actors_user_id_user_id_fk",
+          "tableFrom": "audit_actors",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "user",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "audit_actors_actor_code_unique": {
+          "name": "audit_actors_actor_code_unique",
+          "columns": [
+            "actor_code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "actor_shape": {
+          "name": "actor_shape",
+          "value": "(\"audit_actors\".\"kind\" = 'human' and \"audit_actors\".\"user_id\" is not null) or (\"audit_actors\".\"kind\" = 'service' and \"audit_actors\".\"user_id\" is null)"
+        }
+      },
       "isRLSEnabled": false
     },
-    "public.events": {
-      "name": "events",
+    "public.audit_events": {
+      "name": "audit_events",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "userId": {
-          "name": "userId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "eventDate": {
-          "name": "eventDate",
-          "type": "timestamp",
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "location": {
-          "name": "location",
-          "type": "text",
+        "membership_id": {
+          "name": "membership_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
+        "event_type": {
+          "name": "event_type",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_type": {
+          "name": "resource_type",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "command_id": {
+          "name": "command_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
+        "reason": {
+          "name": "reason",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "safe_changes": {
+          "name": "safe_changes",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "default": "'{}'::jsonb"
+        },
+        "origin": {
+          "name": "origin",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'native'"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "audit_school_time_idx": {
+          "name": "audit_school_time_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_actor_time_idx": {
+          "name": "audit_actor_time_idx",
+          "columns": [
+            {
+              "expression": "actor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_resource_idx": {
+          "name": "audit_resource_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "audit_events_school_id_schools_id_fk": {
+          "name": "audit_events_school_id_schools_id_fk",
+          "tableFrom": "audit_events",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "audit_events_actor_id_audit_actors_id_fk": {
+          "name": "audit_events_actor_id_audit_actors_id_fk",
+          "tableFrom": "audit_events",
+          "columnsFrom": [
+            "actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "audit_events_school_id_membership_id_school_memberships_school_id_id_fk": {
+          "name": "audit_events_school_id_membership_id_school_memberships_school_id_id_fk",
+          "tableFrom": "audit_events",
+          "columnsFrom": [
+            "school_id",
+            "membership_id"
+          ],
+          "tableTo": "school_memberships",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "audit_events_command_id_sequence_unique": {
+          "name": "audit_events_command_id_sequence_unique",
+          "columns": [
+            "command_id",
+            "sequence"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "audit_sequence": {
+          "name": "audit_sequence",
+          "value": "\"audit_events\".\"sequence\" > 0"
+        },
+        "audit_origin": {
+          "name": "audit_origin",
+          "value": "\"audit_events\".\"origin\" in ('native', 'legacy_import')"
+        },
+        "audit_school_shape": {
+          "name": "audit_school_shape",
+          "value": "(\"audit_events\".\"membership_id\" is null or \"audit_events\".\"school_id\" is not null) and (\"audit_events\".\"school_id\" is not null or \"audit_events\".\"event_type\" like 'auth.%' or \"audit_events\".\"event_type\" like 'platform.%')"
+        }
+      },
       "isRLSEnabled": false
     },
-    "public.files": {
-      "name": "files",
+    "public.class_groups": {
+      "name": "class_groups",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "filename": {
-          "name": "filename",
-          "type": "text",
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "originalName": {
-          "name": "originalName",
-          "type": "text",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "mimeType": {
-          "name": "mimeType",
-          "type": "text",
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "size": {
-          "name": "size",
+        "row_version": {
+          "name": "row_version",
           "type": "bigint",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": 1
         },
-        "uploadedBy": {
-          "name": "uploadedBy",
-          "type": "text",
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "academic_year_id": {
+          "name": "academic_year_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "uploadedAt": {
-          "name": "uploadedAt",
-          "type": "timestamp",
+        "grade_id": {
+          "name": "grade_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
-        },
-        "bucketPath": {
-          "name": "bucketPath",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "folderId": {
-          "name": "folderId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
+          "default": "'active'"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "class_status_idx": {
+          "name": "class_status_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "academic_year_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "grade_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "class_groups_school_id_schools_id_fk": {
+          "name": "class_groups_school_id_schools_id_fk",
+          "tableFrom": "class_groups",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "class_groups_created_by_actor_id_audit_actors_id_fk": {
+          "name": "class_groups_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "class_groups",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "class_groups_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "class_groups_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "class_groups",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "class_groups_grade_id_grades_id_fk": {
+          "name": "class_groups_grade_id_grades_id_fk",
+          "tableFrom": "class_groups",
+          "columnsFrom": [
+            "grade_id"
+          ],
+          "tableTo": "grades",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "class_groups_school_id_academic_year_id_academic_years_school_id_id_fk": {
+          "name": "class_groups_school_id_academic_year_id_academic_years_school_id_id_fk",
+          "tableFrom": "class_groups",
+          "columnsFrom": [
+            "school_id",
+            "academic_year_id"
+          ],
+          "tableTo": "academic_years",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "class_groups_school_id_id_unique": {
+          "name": "class_groups_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "class_groups_school_id_id_academic_year_id_grade_id_unique": {
+          "name": "class_groups_school_id_id_academic_year_id_grade_id_unique",
+          "columns": [
+            "school_id",
+            "id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "class_groups_school_id_academic_year_id_grade_id_code_unique": {
+          "name": "class_groups_school_id_academic_year_id_grade_id_code_unique",
+          "columns": [
+            "school_id",
+            "academic_year_id",
+            "grade_id",
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.folders": {
-      "name": "folders",
+    "public.class_placements": {
+      "name": "class_placements",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "userId": {
-          "name": "userId",
-          "type": "text",
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "parentFolderId": {
-          "name": "parentFolderId",
-          "type": "text",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "enrolment_id": {
+          "name": "enrolment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "class_group_id": {
+          "name": "class_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "academic_year_id": {
+          "name": "academic_year_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grade_id": {
+          "name": "grade_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "placement_class_dates_idx": {
+          "name": "placement_class_dates_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "class_group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "starts_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ends_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "class_placements_school_id_schools_id_fk": {
+          "name": "class_placements_school_id_schools_id_fk",
+          "tableFrom": "class_placements",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "class_placements_created_by_actor_id_audit_actors_id_fk": {
+          "name": "class_placements_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "class_placements",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "class_placements_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "class_placements_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "class_placements",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "class_placements_school_id_enrolment_id_academic_year_id_grade_id_learner_enrolments_school_id_id_academic_year_id_grade_id_fk": {
+          "name": "class_placements_school_id_enrolment_id_academic_year_id_grade_id_learner_enrolments_school_id_id_academic_year_id_grade_id_fk",
+          "tableFrom": "class_placements",
+          "columnsFrom": [
+            "school_id",
+            "enrolment_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "tableTo": "learner_enrolments",
+          "columnsTo": [
+            "school_id",
+            "id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "class_placements_school_id_class_group_id_academic_year_id_grade_id_class_groups_school_id_id_academic_year_id_grade_id_fk": {
+          "name": "class_placements_school_id_class_group_id_academic_year_id_grade_id_class_groups_school_id_id_academic_year_id_grade_id_fk",
+          "tableFrom": "class_placements",
+          "columnsFrom": [
+            "school_id",
+            "class_group_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "tableTo": "class_groups",
+          "columnsTo": [
+            "school_id",
+            "id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "class_placements_school_id_id_unique": {
+          "name": "class_placements_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "placement_full_context_unique": {
+          "name": "placement_full_context_unique",
+          "columns": [
+            "school_id",
+            "id",
+            "enrolment_id",
+            "class_group_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "class_placements_school_id_enrolment_id_starts_on_unique": {
+          "name": "class_placements_school_id_enrolment_id_starts_on_unique",
+          "columns": [
+            "school_id",
+            "enrolment_id",
+            "starts_on"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "placement_dates": {
+          "name": "placement_dates",
+          "value": "\"class_placements\".\"ends_on\" is null or \"class_placements\".\"ends_on\" >= \"class_placements\".\"starts_on\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.grades": {
+      "name": "grades",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "curriculum_code": {
+          "name": "curriculum_code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "grade_ordinal_idx": {
+          "name": "grade_ordinal_idx",
+          "columns": [
+            {
+              "expression": "curriculum_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "grades_created_by_actor_id_audit_actors_id_fk": {
+          "name": "grades_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "grades",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "grades_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "grades_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "grades",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "grades_curriculum_code_code_unique": {
+          "name": "grades_curriculum_code_code_unique",
+          "columns": [
+            "curriculum_code",
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "grade_ordinal": {
+          "name": "grade_ordinal",
+          "value": "\"grades\".\"ordinal\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.learner_admissions": {
+      "name": "learner_admissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "learner_id": {
+          "name": "learner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admission_number": {
+          "name": "admission_number",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admitted_on": {
+          "name": "admitted_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "left_on": {
+          "name": "left_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        }
+      },
+      "indexes": {
+        "admission_active_unique": {
+          "name": "admission_active_unique",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "learner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"learner_admissions\".\"status\" = 'active'",
+          "concurrently": false
+        },
+        "admission_learner_dates_idx": {
+          "name": "admission_learner_dates_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "learner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "admitted_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "learner_admissions_school_id_schools_id_fk": {
+          "name": "learner_admissions_school_id_schools_id_fk",
+          "tableFrom": "learner_admissions",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_admissions_created_by_actor_id_audit_actors_id_fk": {
+          "name": "learner_admissions_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "learner_admissions",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_admissions_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "learner_admissions_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "learner_admissions",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_admissions_school_id_learner_id_learners_school_id_id_fk": {
+          "name": "learner_admissions_school_id_learner_id_learners_school_id_id_fk",
+          "tableFrom": "learner_admissions",
+          "columnsFrom": [
+            "school_id",
+            "learner_id"
+          ],
+          "tableTo": "learners",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "learner_admissions_school_id_id_unique": {
+          "name": "learner_admissions_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "learner_admissions_school_id_id_learner_id_unique": {
+          "name": "learner_admissions_school_id_id_learner_id_unique",
+          "columns": [
+            "school_id",
+            "id",
+            "learner_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "learner_admissions_school_id_admission_number_unique": {
+          "name": "learner_admissions_school_id_admission_number_unique",
+          "columns": [
+            "school_id",
+            "admission_number"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "admission_dates": {
+          "name": "admission_dates",
+          "value": "\"learner_admissions\".\"left_on\" is null or \"learner_admissions\".\"left_on\" >= \"learner_admissions\".\"admitted_on\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.learner_enrolments": {
+      "name": "learner_enrolments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "learner_id": {
+          "name": "learner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admission_id": {
+          "name": "admission_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "academic_year_id": {
+          "name": "academic_year_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grade_id": {
+          "name": "grade_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        }
+      },
+      "indexes": {
+        "enrolment_year_status_idx": {
+          "name": "enrolment_year_status_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "academic_year_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "grade_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "learner_enrolments_school_id_schools_id_fk": {
+          "name": "learner_enrolments_school_id_schools_id_fk",
+          "tableFrom": "learner_enrolments",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_enrolments_created_by_actor_id_audit_actors_id_fk": {
+          "name": "learner_enrolments_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "learner_enrolments",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_enrolments_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "learner_enrolments_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "learner_enrolments",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_enrolments_grade_id_grades_id_fk": {
+          "name": "learner_enrolments_grade_id_grades_id_fk",
+          "tableFrom": "learner_enrolments",
+          "columnsFrom": [
+            "grade_id"
+          ],
+          "tableTo": "grades",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_enrolments_school_id_learner_id_learners_school_id_id_fk": {
+          "name": "learner_enrolments_school_id_learner_id_learners_school_id_id_fk",
+          "tableFrom": "learner_enrolments",
+          "columnsFrom": [
+            "school_id",
+            "learner_id"
+          ],
+          "tableTo": "learners",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_enrolments_school_id_academic_year_id_academic_years_school_id_id_fk": {
+          "name": "learner_enrolments_school_id_academic_year_id_academic_years_school_id_id_fk",
+          "tableFrom": "learner_enrolments",
+          "columnsFrom": [
+            "school_id",
+            "academic_year_id"
+          ],
+          "tableTo": "academic_years",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_enrolments_school_id_admission_id_learner_id_learner_admissions_school_id_id_learner_id_fk": {
+          "name": "learner_enrolments_school_id_admission_id_learner_id_learner_admissions_school_id_id_learner_id_fk",
+          "tableFrom": "learner_enrolments",
+          "columnsFrom": [
+            "school_id",
+            "admission_id",
+            "learner_id"
+          ],
+          "tableTo": "learner_admissions",
+          "columnsTo": [
+            "school_id",
+            "id",
+            "learner_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "learner_enrolments_school_id_id_unique": {
+          "name": "learner_enrolments_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "learner_enrolments_school_id_id_academic_year_id_grade_id_unique": {
+          "name": "learner_enrolments_school_id_id_academic_year_id_grade_id_unique",
+          "columns": [
+            "school_id",
+            "id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "learner_enrolments_school_id_learner_id_academic_year_id_unique": {
+          "name": "learner_enrolments_school_id_learner_id_academic_year_id_unique",
+          "columns": [
+            "school_id",
+            "learner_id",
+            "academic_year_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "enrolment_dates": {
+          "name": "enrolment_dates",
+          "value": "\"learner_enrolments\".\"ends_on\" is null or \"learner_enrolments\".\"ends_on\" >= \"learner_enrolments\".\"starts_on\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.learner_subject_enrolments": {
+      "name": "learner_subject_enrolments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enrolment_id": {
+          "name": "enrolment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "placement_id": {
+          "name": "placement_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "offering_id": {
+          "name": "offering_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "class_group_id": {
+          "name": "class_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "academic_year_id": {
+          "name": "academic_year_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grade_id": {
+          "name": "grade_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        }
+      },
+      "indexes": {
+        "subject_enrolment_open_unique": {
+          "name": "subject_enrolment_open_unique",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "enrolment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "offering_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"learner_subject_enrolments\".\"ends_on\" is null",
+          "concurrently": false
+        },
+        "subject_enrolment_offering_status_idx": {
+          "name": "subject_enrolment_offering_status_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "offering_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "learner_subject_enrolments_school_id_schools_id_fk": {
+          "name": "learner_subject_enrolments_school_id_schools_id_fk",
+          "tableFrom": "learner_subject_enrolments",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_subject_enrolments_created_by_actor_id_audit_actors_id_fk": {
+          "name": "learner_subject_enrolments_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "learner_subject_enrolments",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learner_subject_enrolments_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "learner_subject_enrolments_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "learner_subject_enrolments",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_enrolment_placement_context_fk": {
+          "name": "subject_enrolment_placement_context_fk",
+          "tableFrom": "learner_subject_enrolments",
+          "columnsFrom": [
+            "school_id",
+            "placement_id",
+            "enrolment_id",
+            "class_group_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "tableTo": "class_placements",
+          "columnsTo": [
+            "school_id",
+            "id",
+            "enrolment_id",
+            "class_group_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_enrolment_offering_context_fk": {
+          "name": "subject_enrolment_offering_context_fk",
+          "tableFrom": "learner_subject_enrolments",
+          "columnsFrom": [
+            "school_id",
+            "offering_id",
+            "class_group_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "tableTo": "subject_offerings",
+          "columnsTo": [
+            "school_id",
+            "id",
+            "class_group_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "learner_subject_enrolments_school_id_id_unique": {
+          "name": "learner_subject_enrolments_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "subject_enrolment_start_unique": {
+          "name": "subject_enrolment_start_unique",
+          "columns": [
+            "school_id",
+            "enrolment_id",
+            "offering_id",
+            "starts_on"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "subject_enrolment_dates": {
+          "name": "subject_enrolment_dates",
+          "value": "\"learner_subject_enrolments\".\"ends_on\" is null or \"learner_subject_enrolments\".\"ends_on\" >= \"learner_subject_enrolments\".\"starts_on\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.learners": {
+      "name": "learners",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "login_membership_id": {
+          "name": "login_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "learner_login_unique": {
+          "name": "learner_login_unique",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "login_membership_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"learners\".\"login_membership_id\" is not null",
+          "concurrently": false
+        },
+        "learner_status_name_idx": {
+          "name": "learner_status_name_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "display_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "learners_school_id_schools_id_fk": {
+          "name": "learners_school_id_schools_id_fk",
+          "tableFrom": "learners",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learners_created_by_actor_id_audit_actors_id_fk": {
+          "name": "learners_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "learners",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learners_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "learners_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "learners",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "learners_school_id_login_membership_id_school_memberships_school_id_id_fk": {
+          "name": "learners_school_id_login_membership_id_school_memberships_school_id_id_fk",
+          "tableFrom": "learners",
+          "columnsFrom": [
+            "school_id",
+            "login_membership_id"
+          ],
+          "tableTo": "school_memberships",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "learners_school_id_id_unique": {
+          "name": "learners_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.membership_roles": {
+      "name": "membership_roles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "membership_id": {
+          "name": "membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valid_until": {
+          "name": "valid_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "role_open_grant_unique": {
+          "name": "role_open_grant_unique",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "membership_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"membership_roles\".\"valid_until\" is null and \"membership_roles\".\"revoked_at\" is null",
+          "concurrently": false
+        },
+        "membership_role_idx": {
+          "name": "membership_role_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "membership_roles_school_id_schools_id_fk": {
+          "name": "membership_roles_school_id_schools_id_fk",
+          "tableFrom": "membership_roles",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "membership_roles_created_by_actor_id_audit_actors_id_fk": {
+          "name": "membership_roles_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "membership_roles",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "membership_roles_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "membership_roles_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "membership_roles",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "membership_roles_role_id_roles_id_fk": {
+          "name": "membership_roles_role_id_roles_id_fk",
+          "tableFrom": "membership_roles",
+          "columnsFrom": [
+            "role_id"
+          ],
+          "tableTo": "roles",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "membership_roles_school_id_membership_id_school_memberships_school_id_id_fk": {
+          "name": "membership_roles_school_id_membership_id_school_memberships_school_id_id_fk",
+          "tableFrom": "membership_roles",
+          "columnsFrom": [
+            "school_id",
+            "membership_id"
+          ],
+          "tableTo": "school_memberships",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "membership_roles_school_id_id_unique": {
+          "name": "membership_roles_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "membership_roles_school_id_membership_id_role_id_valid_from_unique": {
+          "name": "membership_roles_school_id_membership_id_role_id_valid_from_unique",
+          "columns": [
+            "school_id",
+            "membership_id",
+            "role_id",
+            "valid_from"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "role_grant_dates": {
+          "name": "role_grant_dates",
+          "value": "\"membership_roles\".\"valid_until\" is null or \"membership_roles\".\"valid_until\" > \"membership_roles\".\"valid_from\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.roles": {
+      "name": "roles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
         },
         "name": {
           "name": "name",
-          "type": "text",
+          "type": "varchar(160)",
           "primaryKey": false,
           "notNull": true
         },
-        "description": {
-          "name": "description",
-          "type": "text",
+        "scope": {
+          "name": "scope",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version": {
+          "name": "policy_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "roles_created_by_actor_id_audit_actors_id_fk": {
+          "name": "roles_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "roles",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "roles_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "roles_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "roles",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "roles_code_unique": {
+          "name": "roles_code_unique",
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "role_scope": {
+          "name": "role_scope",
+          "value": "\"roles\".\"scope\" in ('school', 'platform')"
+        },
+        "role_policy_version": {
+          "name": "role_policy_version",
+          "value": "\"roles\".\"policy_version\" > 0"
+        }
+      },
       "isRLSEnabled": false
     },
-    "public.portfolioFiles": {
-      "name": "portfolioFiles",
+    "public.school_memberships": {
+      "name": "school_memberships",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "filename": {
-          "name": "filename",
-          "type": "text",
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "originalName": {
-          "name": "originalName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mimeType": {
-          "name": "mimeType",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "size": {
-          "name": "size",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "uploadedBy": {
-          "name": "uploadedBy",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "uploadedAt": {
-          "name": "uploadedAt",
-          "type": "timestamp",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "bucketPath": {
-          "name": "bucketPath",
-          "type": "text",
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "studentId": {
-          "name": "studentId",
-          "type": "text",
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'invited'"
+        },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "membership_user_status_idx": {
+          "name": "membership_user_status_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "membership_school_status_idx": {
+          "name": "membership_school_status_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "school_memberships_school_id_schools_id_fk": {
+          "name": "school_memberships_school_id_schools_id_fk",
+          "tableFrom": "school_memberships",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "school_memberships_created_by_actor_id_audit_actors_id_fk": {
+          "name": "school_memberships_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "school_memberships",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "school_memberships_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "school_memberships_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "school_memberships",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "school_memberships_user_id_user_id_fk": {
+          "name": "school_memberships_user_id_user_id_fk",
+          "tableFrom": "school_memberships",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "user",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "school_memberships_school_id_id_unique": {
+          "name": "school_memberships_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "school_memberships_school_id_user_id_unique": {
+          "name": "school_memberships_school_id_user_id_unique",
+          "columns": [
+            "school_id",
+            "user_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "active_membership_joined": {
+          "name": "active_membership_joined",
+          "value": "\"school_memberships\".\"status\" <> 'active' or (\"school_memberships\".\"joined_at\" is not null and \"school_memberships\".\"ended_at\" is null)"
+        },
+        "membership_dates": {
+          "name": "membership_dates",
+          "value": "\"school_memberships\".\"ended_at\" is null or \"school_memberships\".\"ended_at\" >= \"school_memberships\".\"joined_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.school_subjects": {
+      "name": "school_subjects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "local_code": {
+          "name": "local_code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {
+        "school_subject_enabled_idx": {
+          "name": "school_subject_enabled_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "enabled",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "school_subjects_school_id_schools_id_fk": {
+          "name": "school_subjects_school_id_schools_id_fk",
+          "tableFrom": "school_subjects",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "school_subjects_created_by_actor_id_audit_actors_id_fk": {
+          "name": "school_subjects_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "school_subjects",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "school_subjects_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "school_subjects_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "school_subjects",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "school_subjects_subject_id_subject_catalogue_id_fk": {
+          "name": "school_subjects_subject_id_subject_catalogue_id_fk",
+          "tableFrom": "school_subjects",
+          "columnsFrom": [
+            "subject_id"
+          ],
+          "tableTo": "subject_catalogue",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "school_subjects_school_id_id_unique": {
+          "name": "school_subjects_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "school_subjects_school_id_id_subject_id_unique": {
+          "name": "school_subjects_school_id_id_subject_id_unique",
+          "columns": [
+            "school_id",
+            "id",
+            "subject_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "school_subjects_school_id_subject_id_unique": {
+          "name": "school_subjects_school_id_subject_id_unique",
+          "columns": [
+            "school_id",
+            "subject_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "school_subjects_school_id_local_code_unique": {
+          "name": "school_subjects_school_id_local_code_unique",
+          "columns": [
+            "school_id",
+            "local_code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.schools": {
+      "name": "schools",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Africa/Nairobi'"
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "school_status_idx": {
+          "name": "school_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "schools_created_by_actor_id_audit_actors_id_fk": {
+          "name": "schools_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "schools",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "schools_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "schools_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "schools",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "schools_code_unique": {
+          "name": "schools_code_unique",
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -541,86 +3185,1227 @@
         "session_userId_user_id_fk": {
           "name": "session_userId_user_id_fk",
           "tableFrom": "session",
-          "tableTo": "user",
           "columnsFrom": [
             "userId"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "token"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.students": {
-      "name": "students",
+    "public.staff_profiles": {
+      "name": "staff_profiles",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
-          "type": "text",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "membership_id": {
+          "name": "membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staff_code": {
+          "name": "staff_code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        }
+      },
+      "indexes": {
+        "staff_status_idx": {
+          "name": "staff_status_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "staff_profiles_school_id_schools_id_fk": {
+          "name": "staff_profiles_school_id_schools_id_fk",
+          "tableFrom": "staff_profiles",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "staff_profiles_created_by_actor_id_audit_actors_id_fk": {
+          "name": "staff_profiles_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "staff_profiles",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "staff_profiles_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "staff_profiles_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "staff_profiles",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "staff_profiles_school_id_membership_id_school_memberships_school_id_id_fk": {
+          "name": "staff_profiles_school_id_membership_id_school_memberships_school_id_id_fk",
+          "tableFrom": "staff_profiles",
+          "columnsFrom": [
+            "school_id",
+            "membership_id"
+          ],
+          "tableTo": "school_memberships",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "staff_profiles_school_id_id_unique": {
+          "name": "staff_profiles_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "staff_profiles_school_id_membership_id_unique": {
+          "name": "staff_profiles_school_id_membership_id_unique",
+          "columns": [
+            "school_id",
+            "membership_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "staff_profiles_school_id_staff_code_unique": {
+          "name": "staff_profiles_school_id_staff_code_unique",
+          "columns": [
+            "school_id",
+            "staff_code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.subject_catalogue": {
+      "name": "subject_catalogue",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "curriculum_code": {
+          "name": "curriculum_code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(160)",
           "primaryKey": false,
           "notNull": true
         },
         "name": {
           "name": "name",
-          "type": "text",
+          "type": "varchar(160)",
           "primaryKey": false,
           "notNull": true
         },
-        "className": {
-          "name": "className",
-          "type": "text",
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "avatarUrl": {
-          "name": "avatarUrl",
-          "type": "text",
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "subject_curriculum_status_idx": {
+          "name": "subject_curriculum_status_idx",
+          "columns": [
+            {
+              "expression": "curriculum_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "subject_catalogue_created_by_actor_id_audit_actors_id_fk": {
+          "name": "subject_catalogue_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "subject_catalogue",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_catalogue_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "subject_catalogue_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "subject_catalogue",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "subject_catalogue_curriculum_code_code_unique": {
+          "name": "subject_catalogue_curriculum_code_code_unique",
+          "columns": [
+            "curriculum_code",
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.subject_grades": {
+      "name": "subject_grades",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grade_id": {
+          "name": "grade_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "subject_grade_idx": {
+          "name": "subject_grade_idx",
+          "columns": [
+            {
+              "expression": "grade_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "subject_grades_subject_id_subject_catalogue_id_fk": {
+          "name": "subject_grades_subject_id_subject_catalogue_id_fk",
+          "tableFrom": "subject_grades",
+          "columnsFrom": [
+            "subject_id"
+          ],
+          "tableTo": "subject_catalogue",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_grades_grade_id_grades_id_fk": {
+          "name": "subject_grades_grade_id_grades_id_fk",
+          "tableFrom": "subject_grades",
+          "columnsFrom": [
+            "grade_id"
+          ],
+          "tableTo": "grades",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_grades_created_by_actor_id_audit_actors_id_fk": {
+          "name": "subject_grades_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "subject_grades",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_grades_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "subject_grades_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "subject_grades",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "subject_grades_subject_id_grade_id_unique": {
+          "name": "subject_grades_subject_id_grade_id_unique",
+          "columns": [
+            "subject_id",
+            "grade_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.subject_offerings": {
+      "name": "subject_offerings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
+        "school_subject_id": {
+          "name": "school_subject_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "class_group_id": {
+          "name": "class_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "academic_year_id": {
+          "name": "academic_year_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grade_id": {
+          "name": "grade_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        }
+      },
+      "indexes": {
+        "offering_context_idx": {
+          "name": "offering_context_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "academic_year_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "grade_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "subject_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "subject_offerings_school_id_schools_id_fk": {
+          "name": "subject_offerings_school_id_schools_id_fk",
+          "tableFrom": "subject_offerings",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_offerings_created_by_actor_id_audit_actors_id_fk": {
+          "name": "subject_offerings_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "subject_offerings",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_offerings_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "subject_offerings_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "subject_offerings",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_offerings_school_id_school_subject_id_subject_id_school_subjects_school_id_id_subject_id_fk": {
+          "name": "subject_offerings_school_id_school_subject_id_subject_id_school_subjects_school_id_id_subject_id_fk",
+          "tableFrom": "subject_offerings",
+          "columnsFrom": [
+            "school_id",
+            "school_subject_id",
+            "subject_id"
+          ],
+          "tableTo": "school_subjects",
+          "columnsTo": [
+            "school_id",
+            "id",
+            "subject_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_offerings_school_id_class_group_id_academic_year_id_grade_id_class_groups_school_id_id_academic_year_id_grade_id_fk": {
+          "name": "subject_offerings_school_id_class_group_id_academic_year_id_grade_id_class_groups_school_id_id_academic_year_id_grade_id_fk",
+          "tableFrom": "subject_offerings",
+          "columnsFrom": [
+            "school_id",
+            "class_group_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "tableTo": "class_groups",
+          "columnsTo": [
+            "school_id",
+            "id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "subject_offerings_subject_id_grade_id_subject_grades_subject_id_grade_id_fk": {
+          "name": "subject_offerings_subject_id_grade_id_subject_grades_subject_id_grade_id_fk",
+          "tableFrom": "subject_offerings",
+          "columnsFrom": [
+            "subject_id",
+            "grade_id"
+          ],
+          "tableTo": "subject_grades",
+          "columnsTo": [
+            "subject_id",
+            "grade_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "subject_offerings_school_id_id_unique": {
+          "name": "subject_offerings_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "subject_offerings_school_id_class_group_id_school_subject_id_unique": {
+          "name": "subject_offerings_school_id_class_group_id_school_subject_id_unique",
+          "columns": [
+            "school_id",
+            "class_group_id",
+            "school_subject_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "offering_full_context_unique": {
+          "name": "offering_full_context_unique",
+          "columns": [
+            "school_id",
+            "id",
+            "class_group_id",
+            "academic_year_id",
+            "grade_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.teacher_assignments": {
+      "name": "teacher_assignments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "staff_id": {
+          "name": "staff_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "offering_id": {
+          "name": "offering_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "teacher_staff_status_idx": {
+          "name": "teacher_staff_status_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "staff_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "teacher_offering_status_idx": {
+          "name": "teacher_offering_status_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "offering_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "teacher_assignments_school_id_schools_id_fk": {
+          "name": "teacher_assignments_school_id_schools_id_fk",
+          "tableFrom": "teacher_assignments",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "teacher_assignments_created_by_actor_id_audit_actors_id_fk": {
+          "name": "teacher_assignments_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "teacher_assignments",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "teacher_assignments_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "teacher_assignments_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "teacher_assignments",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "teacher_assignments_school_id_staff_id_staff_profiles_school_id_id_fk": {
+          "name": "teacher_assignments_school_id_staff_id_staff_profiles_school_id_id_fk",
+          "tableFrom": "teacher_assignments",
+          "columnsFrom": [
+            "school_id",
+            "staff_id"
+          ],
+          "tableTo": "staff_profiles",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "teacher_assignments_school_id_offering_id_subject_offerings_school_id_id_fk": {
+          "name": "teacher_assignments_school_id_offering_id_subject_offerings_school_id_id_fk",
+          "tableFrom": "teacher_assignments",
+          "columnsFrom": [
+            "school_id",
+            "offering_id"
+          ],
+          "tableTo": "subject_offerings",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "teacher_assignments_school_id_id_unique": {
+          "name": "teacher_assignments_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "teacher_assignments_school_id_staff_id_offering_id_starts_on_unique": {
+          "name": "teacher_assignments_school_id_staff_id_offering_id_starts_on_unique",
+          "columns": [
+            "school_id",
+            "staff_id",
+            "offering_id",
+            "starts_on"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "teacher_dates": {
+          "name": "teacher_dates",
+          "value": "\"teacher_assignments\".\"ends_on\" is null or \"teacher_assignments\".\"ends_on\" >= \"teacher_assignments\".\"starts_on\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.terms": {
+      "name": "terms",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "school_id": {
+          "name": "school_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "academic_year_id": {
+          "name": "academic_year_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "term_start_idx": {
+          "name": "term_start_idx",
+          "columns": [
+            {
+              "expression": "school_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "academic_year_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "starts_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "terms_school_id_schools_id_fk": {
+          "name": "terms_school_id_schools_id_fk",
+          "tableFrom": "terms",
+          "columnsFrom": [
+            "school_id"
+          ],
+          "tableTo": "schools",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "terms_created_by_actor_id_audit_actors_id_fk": {
+          "name": "terms_created_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "terms",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "terms_updated_by_actor_id_audit_actors_id_fk": {
+          "name": "terms_updated_by_actor_id_audit_actors_id_fk",
+          "tableFrom": "terms",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "tableTo": "audit_actors",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "terms_school_id_academic_year_id_academic_years_school_id_id_fk": {
+          "name": "terms_school_id_academic_year_id_academic_years_school_id_id_fk",
+          "tableFrom": "terms",
+          "columnsFrom": [
+            "school_id",
+            "academic_year_id"
+          ],
+          "tableTo": "academic_years",
+          "columnsTo": [
+            "school_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "terms_school_id_id_unique": {
+          "name": "terms_school_id_id_unique",
+          "columns": [
+            "school_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "terms_school_id_academic_year_id_code_unique": {
+          "name": "terms_school_id_academic_year_id_code_unique",
+          "columns": [
+            "school_id",
+            "academic_year_id",
+            "code"
+          ],
+          "nullsNotDistinct": false
+        },
+        "terms_school_id_academic_year_id_ordinal_unique": {
+          "name": "terms_school_id_academic_year_id_ordinal_unique",
+          "columns": [
+            "school_id",
+            "academic_year_id",
+            "ordinal"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "term_ordinal": {
+          "name": "term_ordinal",
+          "value": "\"terms\".\"ordinal\" > 0"
+        },
+        "term_dates": {
+          "name": "term_dates",
+          "value": "\"terms\".\"ends_on\" is null or \"terms\".\"ends_on\" >= \"terms\".\"starts_on\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.user": {
@@ -679,10 +4464,10 @@
       "uniqueConstraints": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -743,10 +4528,10 @@
   },
   "enums": {},
   "schemas": {},
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

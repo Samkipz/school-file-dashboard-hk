@@ -14,7 +14,11 @@ function getDefaultFileName(file: File) {
   return file.name.replace(/\.[^/.]+$/, '')
 }
 
-export function StaffResourcesUpload({
+export function StaffResourcesUpload(props: React.ComponentProps<typeof StaffResourcesUploadForm>) {
+  return props.isOpen ? <StaffResourcesUploadForm {...props} key={props.currentFolderId ?? ''} /> : null
+}
+
+function StaffResourcesUploadForm({
   isOpen,
   onClose,
   folders,
@@ -40,19 +44,9 @@ export function StaffResourcesUpload({
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
   const [fileName, setFileName] = React.useState('')
   const [fileNameEdited, setFileNameEdited] = React.useState(false)
-  const [selectedFolderId, setSelectedFolderId] = React.useState<string>('')
+  const [selectedFolderId, setSelectedFolderId] = React.useState(currentFolderId || '')
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setSelectedFile(null)
-      setFileName('')
-      setFileNameEdited(false)
-      setSelectedFolderId(currentFolderId || '')
-      setError(null)
-    }
-  }, [isOpen, currentFolderId])
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null

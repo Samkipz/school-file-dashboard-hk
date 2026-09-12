@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 
 const navItems = [
+  { label: 'School Administration', href: '/admin/academics', icon: Users },
+  { label: 'Academics', href: '/academics', icon: Layers },
   {
     label: 'Dashboard',
     href: '/',

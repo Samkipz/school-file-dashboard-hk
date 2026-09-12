@@ -45,7 +45,6 @@ export function CalendarClient({ initialEvents }: { initialEvents: Event[] }) {
   const [isDetailOpen, setIsDetailOpen] = React.useState(false)
   const [editingEvent, setEditingEvent] = React.useState<(Event & { color?: string; endDate?: Date }) | null>(null)
   const [deleteTarget, setDeleteTarget] = React.useState<(Event & { color?: string }) | null>(null)
-  const [loading, setLoading] = React.useState(false)
   const { toasts, addToast } = useToast()
 
   const [form, setForm] = React.useState({
@@ -57,23 +56,16 @@ export function CalendarClient({ initialEvents }: { initialEvents: Event[] }) {
     color: '#3b82f6',
   })
 
-  const loadMonthEvents = React.useCallback(async (year: number, month: number) => {
-    setLoading(true)
-    try {
-      const data = await getEvents(year, month)
-      setEvents(data as Event[])
-    } catch {
-      addToast('Failed to load events', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [addToast])
-
   React.useEffect(() => {
+    let active = true
     const year = currentMonth.getFullYear()
     const month = currentMonth.getMonth()
-    loadMonthEvents(year, month)
-  }, [currentMonth, loadMonthEvents])
+    getEvents(year, month).then(
+      (data) => { if (active) setEvents(data) },
+      () => { if (active) addToast('Failed to load events', 'error') },
+    )
+    return () => { active = false }
+  }, [currentMonth, addToast])
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -440,7 +432,7 @@ export function CalendarClient({ initialEvents }: { initialEvents: Event[] }) {
           <div className="w-full max-w-sm rounded-3xl border border-border bg-background p-6 shadow-xl shadow-black/10">
             <h3 className="text-lg font-semibold text-foreground">Delete event?</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              This will permanently remove "{deleteTarget.title}". This action cannot be undone.
+              This will permanently remove &quot;{deleteTarget.title}&quot;. This action cannot be undone.
             </p>
             <div className="flex items-center justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>

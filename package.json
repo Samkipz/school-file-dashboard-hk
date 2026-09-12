@@ -6,7 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit --incremental false",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:reset": "node scripts/db-migrate.mjs --reset schoolhub-fresh-dev",
+    "db:seed": "node scripts/db-seed.mjs",
+    "db:verify": "node scripts/db-verify.mjs",
+    "test:integration": "node scripts/db-integration.mjs",
+    "test:admin": "node scripts/admin-integration.mjs",
+    "test:admin:smoke": "node scripts/admin-smoke.mjs",
+    "test:admin:browser": "node scripts/admin-browser-smoke.mjs",
+    "test:concurrency": "node scripts/db-concurrency.mjs",
+    "test:auth": "node scripts/auth-smoke.mjs",
+    "test:lifecycle": "node scripts/lifecycle-integration.mjs",
+    "test:files": "node scripts/files-integration.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1089.0",
@@ -35,8 +51,12 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.2.6",
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "vitest": "4.1.11"
   }
 }
+
