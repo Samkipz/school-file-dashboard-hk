@@ -1,0 +1,13 @@
+
+> my-project@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.11 C:/Users/Sam/Documents/Backup/codezone/school-cloud
+
+
+ Test Files  9 passed (9)
+      Tests  62 passed (62)
+   Start at  10:00:35
+   Duration  3.52s (transform 1.20s, setup 453ms, import 3.26s, tests 606ms, environment 4ms)
+

@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import { developmentPool,safeFailure } from './db-common.mjs'
 import { fixtureId as id,devSchoolId as school } from './dev-fixtures.mjs'
 import { fileService } from '../lib/domain/files.ts'
@@ -24,8 +23,8 @@ const test=async(label,fn)=>{await fn();passed++;console.log(`PASS ${label}`)}
 const row=async assetId=>(await client.query('SELECT * FROM media_assets WHERE id=$1',[assetId])).rows[0]
 try {
  await client.query('BEGIN')
- // Review/test the additive migration without changing the pinned target or its ledger.
- if(!(await client.query("SELECT to_regclass('public.media_assets') AS name")).rows[0].name)await client.query(readFileSync('drizzle/0002_portfolio_media.sql','utf8'))
+ // Require live migration; only test fixture changes roll back.
+ assert.ok((await client.query("SELECT to_regclass('public.media_assets') AS name")).rows[0].name, 'Apply portfolio/media migration first')
  let file,folder,media
  await test('admin lists authoritative learners',async()=>{assert.ok((await service.listLearners(school)).learners.some(l=>l.id===target.learnerId))})
  await test('admin upload stores authoritative learner, metadata, uploader and private object',async()=>{file=await service.upload(school,target,form());const f=await row(file.id);assert.equal(f.learner_id,target.learnerId);assert.equal(f.school_id,school);assert.equal(f.title,'Portfolio evidence');assert.equal(f.description,'Test evidence');assert.equal(f.category,'work');assert.equal(f.uploaded_by_actor_id,id('actor-admin'));assert.equal(f.state,'ready');assert.ok(objects.has(f.object_key));assert.ok(f.object_key.startsWith(`schools/${school}/assets/`));assert.equal(f.size,objects.get(f.object_key).bytes.length)})

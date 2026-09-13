@@ -1,0 +1,50 @@
+node : (node:13944) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as 
+aliases for 'verify-full'.
+At line:2 char:1
++ node scripts/db-verify.mjs 2>&1 | Tee-Object .github/verification/por ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:13944) Wa... 'verify-full'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq 
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  result: 'PASS',
+  publicTables: 27,
+  columns: 311,
+  foreignKeys: 89,
+  unvalidatedConstraints: 0,
+  unindexedForeignKeys: 0,
+  migrations: 3,
+  providerTablesUntouched: '9',
+  counts: {
+    schools: 1,
+    audit_actors: 4,
+    school_memberships: 3,
+    roles: 3,
+    membership_roles: 3,
+    staff_profiles: 3,
+    learners: 4,
+    learner_admissions: 4,
+    academic_years: 1,
+    terms: 3,
+    grades: 1,
+    class_groups: 1,
+    learner_enrolments: 4,
+    class_placements: 4,
+    subject_catalogue: 3,
+    subject_grades: 3,
+    school_subjects: 3,
+    subject_offerings: 3,
+    learner_subject_enrolments: 12,
+    teacher_assignments: 3,
+    audit_events: 3
+  }
+}

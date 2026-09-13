@@ -1,0 +1,81 @@
+node : (node:11056) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Sam/Documents/Backup/codezone/school-cloud/lib/domain/administration.ts is not specified and it 
+doesn't parse as CommonJS.
+At line:2 char:1
++ node scripts/admin-integration.mjs 2>&1 | Tee-Object .github/verifica ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:11056) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to 
+\\?\C:\Users\Sam\Documents\Backup\codezone\school-cloud\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11056) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq 
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+PASS admin reads school-scoped administration data
+PASS required learner name
+PASS add learner
+PASS successful admission
+PASS duplicate active admission rejected
+PASS duplicate admission number rejected
+PASS successful yearly enrolment
+PASS duplicate yearly enrolment rejected
+PASS enrolment outside year rejected
+PASS successful class placement
+PASS overlapping placement rejected
+PASS subject enrolment
+PASS duplicate subject enrolment rejected
+PASS create destination class
+PASS same-class transfer rejected
+PASS transfer before placement start rejected
+PASS transfer preserves placement and subject history
+PASS old class subject rejected for new placement
+PASS create subject offering
+PASS duplicate offering rejected
+PASS enrol transferred learner in destination subject
+PASS teacher assignment creation
+PASS duplicate assignment rejected
+PASS assignment reversed dates rejected
+PASS assignment outside year rejected
+PASS staff without teacher role rejected
+PASS failed replacement rolls back old assignment
+PASS replacement preserves previous teacher history
+PASS future termination preserves current teacher access
+PASS past termination retains row and ends assignment
+PASS create and edit academic year
+PASS create and edit term
+PASS term overlap rejected
+PASS term outside year rejected
+PASS year edits cannot truncate existing term history
+PASS create class in another academic year
+PASS wrong year placement rejected
+PASS disable and re-enable school subject
+PASS enable a catalogue subject for the school
+PASS subject not applicable to class grade rejected
+PASS rename and close a class without deleting history
+PASS offering in closed class rejected
+PASS closed school subject blocks new offerings
+PASS cross-school admin read rejected
+PASS caller-supplied foreign school rejected
+PASS foreign learner reference with own school rejected
+PASS teacher cannot read administration
+PASS teacher cannot add learners
+PASS teacher cannot assign teachers
+PASS moderator cannot read administration
+PASS moderator cannot add learners
+PASS moderator cannot assign teachers
+PASS teacher cannot read ended assignment roster
+PASS admin can read transferred roster
+PASS close offering retains assignment and learner history
+PASS meaningful mutations have safe grouped audit records
+PASS audit failure rolls back all workflow changes
+Administration integration PASS: 57 checks; database state verified; all test changes rolled back

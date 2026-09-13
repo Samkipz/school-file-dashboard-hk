@@ -1,0 +1,48 @@
+node : (node:22576) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Sam/Documents/Backup/codezone/school-cloud/lib/domain/files.ts is not specified and it doesn't parse 
+as CommonJS.
+At line:2 char:1
++ node scripts/files-integration.mjs 2>&1 | Tee-Object .github/verifica ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:22576) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to 
+\\?\C:\Users\Sam\Documents\Backup\codezone\school-cloud\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:22576) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq 
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+PASS admin lists authoritative learners
+PASS admin upload stores authoritative learner, metadata, uploader and private object
+PASS metadata omits keys and exposes uploader name
+PASS authorized download returns exact bytes
+PASS media folder create, rename and upload
+PASS nonempty folder archive rejected
+PASS teacher learner scope equals union of actual academic rosters
+PASS teacher cannot upload, edit, archive or access general media
+PASS teacher without assignments loses learner/file access
+PASS moderator has no portfolio or media administration
+PASS anonymous requests rejected
+PASS even a two-school admin cannot mix selected school and foreign learner/file/folder IDs
+PASS caller-supplied foreign school without membership rejected
+PASS arbitrary keys, IDs and ambiguous targets rejected
+PASS database composite foreign key rejects cross-school learner association
+PASS invalid upload creates neither metadata nor object
+PASS database reservation failure prevents object write
+PASS storage failure leaves tracked failed metadata, no ready file
+Media upload requires reconciliation { assetId: 'f09f33da-5e1e-4fd4-9231-bcf64f677c5a' }
+PASS finalization failure retains tracked pending object and hides it from reads
+PASS withdrawal preserves file; teacher loses scope while admin retains access
+PASS re-admission and later academic year keep the same portfolio identity
+PASS completed learner retains portfolio history
+PASS metadata editing and archive preserve object and audit history
+Portfolio/media integration PASS: 23 checks; database changes rolled back; storage was in memory only

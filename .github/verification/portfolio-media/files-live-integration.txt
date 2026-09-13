@@ -1,0 +1,31 @@
+node : (node:14200) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Sam/Documents/Backup/codezone/school-cloud/lib/domain/files.ts is not specified and it doesn't parse 
+as CommonJS.
+At line:2 char:1
++ node scripts/files-live-integration.mjs --retain-test-evidence 2>&1 | ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:14200) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to 
+\\?\C:\Users\Sam\Documents\Backup\codezone\school-cloud\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14200) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq 
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+PASS existing DEV-SCHOOL / Sample Learner 1 / Development Admin; 27 live public tables
+PASS real service R2 upload; retained asset ID: 7c302433-402a-43cd-b931-1724f36cf7ef
+PASS committed metadata and key pattern schools/<school-uuid>/assets/<asset-uuid>.pdf
+PASS real admin R2 download: 76 bytes; SHA-256 511bc7366993fc4914f11863d3756f234299b98d08ec8fec1a0a8696e0f902a4
+PASS assigned teacher live download
+PASS moderator and anonymous live downloads rejected
+PASS two committed upload audit events; exact 27-table public set unchanged
+Live portfolio/media integration PASS; object and metadata retained; no seed, reset, migration or object deletion

@@ -1,0 +1,30 @@
+
+> my-project@0.1.0 lint
+> eslint .
+
+
+C:\Users\Sam\Documents\Backup\codezone\school-cloud\app\actions\calendar.ts
+  9:29  warning  'desc' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Sam\Documents\Backup\codezone\school-cloud\app\actions\dashboard.ts
+   8:20  warning  'gte' is defined but never used              @typescript-eslint/no-unused-vars
+  21:9   warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Sam\Documents\Backup\codezone\school-cloud\app\actions\staff-resources.ts
+  16:16  warning  'getUserId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Sam\Documents\Backup\codezone\school-cloud\app\layout.tsx
+  7:7  warning  'geistMono' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Sam\Documents\Backup\codezone\school-cloud\components\sidebar-nav.tsx
+   7:34  warning  'Bell' is defined but never used                                                                                                                                                             @typescript-eslint/no-unused-vars
+  50:9   warning  The 'close' logical expression could make the dependencies of useEffect Hook (at line 77) change on every render. To fix this, wrap the initialization of 'close' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\Sam\Documents\Backup\codezone\school-cloud\components\staff-resources-upload.tsx
+  5:10  warning  'Card' is defined but never used        @typescript-eslint/no-unused-vars
+  8:10  warning  'FolderPlus' is defined but never used  @typescript-eslint/no-unused-vars
+  8:22  warning  'Upload' is defined but never used      @typescript-eslint/no-unused-vars
+  8:33  warning  'FileText' is defined but never used    @typescript-eslint/no-unused-vars
+
+✖ 11 problems (0 errors, 11 warnings)
+

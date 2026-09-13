@@ -1,0 +1,131 @@
+node : (node:17900) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as 
+aliases for 'verify-full'.
+At line:2 char:1
++ node scripts/db-inspect.mjs 2>&1 | Tee-Object .github/verification/po ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:17900) Wa... 'verify-full'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq 
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[
+  {
+    database: 'neondb',
+    table_schema: 'drizzle',
+    table_name: '__drizzle_migrations'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'academic_years'
+  },
+  { database: 'neondb', table_schema: 'public', table_name: 'account' },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'audit_actors'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'audit_events'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'class_groups'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'class_placements'
+  },
+  { database: 'neondb', table_schema: 'public', table_name: 'grades' },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'learner_admissions'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'learner_enrolments'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'learner_subject_enrolments'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'learners'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'media_assets'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'media_folders'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'membership_roles'
+  },
+  { database: 'neondb', table_schema: 'public', table_name: 'roles' },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'school_memberships'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'school_subjects'
+  },
+  { database: 'neondb', table_schema: 'public', table_name: 'schools' },
+  { database: 'neondb', table_schema: 'public', table_name: 'session' },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'staff_profiles'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'subject_catalogue'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'subject_grades'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'subject_offerings'
+  },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'teacher_assignments'
+  },
+  { database: 'neondb', table_schema: 'public', table_name: 'terms' },
+  { database: 'neondb', table_schema: 'public', table_name: 'user' },
+  {
+    database: 'neondb',
+    table_schema: 'public',
+    table_name: 'verification'
+  }
+]

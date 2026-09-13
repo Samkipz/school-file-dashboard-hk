@@ -1,0 +1,65 @@
+node : (node:15956) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Sam/Documents/Backup/codezone/school-cloud/lib/domain/administration.ts is not specified and it 
+doesn't parse as CommonJS.
+At line:2 char:1
++ node scripts/lifecycle-integration.mjs 2>&1 | Tee-Object .github/veri ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:15956) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to 
+\\?\C:\Users\Sam\Documents\Backup\codezone\school-cloud\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15956) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq 
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+PASS withdrawal requires reason
+PASS withdrawal rejects future date
+PASS withdrawal rejects date before admission
+PASS successful withdrawal closes admission, enrolment, placement and subjects
+PASS withdrawn learners disappear from current offering roster
+PASS repeat withdrawal rejected
+PASS normal admission blocked after withdrawal
+PASS re-admission cannot overlap prior admission
+PASS re-admission creates new admission and retains closed history
+PASS active learner cannot be re-admitted again
+PASS completion closes academic records and sets completed status
+PASS repeated completion rejected
+PASS normal enrolment blocked after completion
+PASS completed learner may be explicitly re-admitted
+PASS invalid grade progression rejected
+PASS invalid destination class year rejected
+PASS same source and destination rejected
+PASS inactive destination rejected
+PASS preview has no mutations and identifies carried/omitted subjects and teachers
+PASS commit requires explicit confirmation
+PASS stale preview rejected after destination changes
+PASS late teacher assignment failure rolls back every selected learner and audit
+PASS promotion, repeat, destination placement, subjects and teachers succeed together
+PASS repeated rollover preview rejected
+PASS repeated rollover commit rejected
+PASS withdrawal with future scheduled destination records rejected cleanly
+PASS bulk completion and withdrawal preserve already-ended historical records
+PASS lifecycle audit keeps reason, effective date, previous and next status
+PASS cross-school learner reference rejected
+PASS cross-school execution rejected
+PASS teacher cannot withdrawLearner
+PASS teacher cannot completeLearner
+PASS teacher cannot readmitLearner
+PASS teacher cannot previewRollover
+PASS teacher cannot commitRollover
+PASS moderator cannot withdrawLearner
+PASS moderator cannot completeLearner
+PASS moderator cannot readmitLearner
+PASS moderator cannot previewRollover
+PASS moderator cannot commitRollover
+PASS anonymous access rejected
+Learner lifecycle integration PASS: 41 checks; all fixture changes rolled back
