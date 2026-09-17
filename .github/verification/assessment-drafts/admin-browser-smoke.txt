@@ -1,0 +1,1 @@
+Administration browser smoke PASS: all six tabs, lifecycle controls/history, explicit rollover selection, destination picker, invalid preview rejected without confirmation, real Server Action validation, mobile width

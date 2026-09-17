@@ -106,7 +106,7 @@ export const academicYears = pgTable('academic_years', {
 export const terms = pgTable('terms', {
     ...tenant(), academicYearId: uuid('academic_year_id').notNull(), code: label('code'), ordinal: integer('ordinal').notNull(), startsOn: date('starts_on').notNull(), endsOn: date('ends_on').notNull(),
 }, t => [
-    tenantKey(t), tenantFk(t, t.academicYearId, academicYears), unique().on(t.schoolId, t.academicYearId, t.code), unique().on(t.schoolId, t.academicYearId, t.ordinal), index('term_start_idx').on(t.schoolId, t.academicYearId, t.startsOn), check('term_ordinal', sql `${t.ordinal} > 0`), interval('term_dates', t.startsOn, t.endsOn)
+    tenantKey(t), unique('term_year_context_unique').on(t.schoolId, t.id, t.academicYearId), tenantFk(t, t.academicYearId, academicYears), unique().on(t.schoolId, t.academicYearId, t.code), unique().on(t.schoolId, t.academicYearId, t.ordinal), index('term_start_idx').on(t.schoolId, t.academicYearId, t.startsOn), check('term_ordinal', sql `${t.ordinal} > 0`), interval('term_dates', t.startsOn, t.endsOn)
 ]);
 export const grades = pgTable('grades', {
     id: id(), curriculumCode: label('curriculum_code'), code: label('code'), label: label('label'), ordinal: integer('ordinal').notNull(), ...lifecycle(),
@@ -164,7 +164,7 @@ export const schoolSubjects = pgTable('school_subjects', {
 export const subjectOfferings = pgTable('subject_offerings', {
     ...tenant(), schoolSubjectId: uuid('school_subject_id').notNull(), classGroupId: uuid('class_group_id').notNull(), academicYearId: uuid('academic_year_id').notNull(), gradeId: uuid('grade_id').notNull(), subjectId: uuid('subject_id').notNull(), status: status(['active', 'closed'], 'active'),
 }, t => [
-    tenantKey(t), foreignKey({
+    tenantKey(t), unique('offering_year_context_unique').on(t.schoolId, t.id, t.academicYearId), foreignKey({
         columns: [
             t.schoolId, t.schoolSubjectId, t.subjectId
         ], foreignColumns: [
@@ -242,3 +242,34 @@ export const mediaAssets = pgTable('media_assets', {
     check('media_asset_state', sql `${t.state} in ('pending','ready','failed')`),
     check('media_asset_category', sql `${t.category} in ('general','work','certificate','photo','video')`),
 ]);
+
+// Draft planning is shared by every configured grade. Cross-row date guards are
+// installed by the accompanying forward guard migration.
+const planningFields = () => ({ title: label('title'), instructions: varchar('instructions', { length: 4000 }), startsOn: date('starts_on'), dueOn: date('due_on') });
+// Exact ECMAScript String.trim whitespace set; independent of database locale.
+const planningWhitespace = sql.raw("U&'\\0009\\000A\\000B\\000C\\000D\\0020\\00A0\\1680\\2000\\2001\\2002\\2003\\2004\\2005\\2006\\2007\\2008\\2009\\200A\\2028\\2029\\202F\\205F\\3000\\FEFF'");
+const planningChecks = (name: string, t: { title: AnyPgColumn; startsOn: AnyPgColumn; dueOn: AnyPgColumn; rowVersion: AnyPgColumn }) => [
+    check(`${name}_title`, sql `length(btrim(${t.title}, ${planningWhitespace})) > 0`),
+    check(`${name}_dates`, sql `${t.startsOn} is null or ${t.dueOn} is null or ${t.startsOn} <= ${t.dueOn}`),
+    check(`${name}_version`, sql `${t.rowVersion} > 0`),
+];
+export const assessmentTypes = pgTable('assessment_types', {
+    ...tenant(), code: varchar('code', { length: 64 }).notNull(), name: label('name'), enabled: boolean('enabled').notNull().default(true),
+}, t => [tenantKey(t), unique().on(t.schoolId, t.code),
+    index('assessment_type_creator_idx').on(t.createdByActorId), index('assessment_type_updater_idx').on(t.updatedByActorId),
+    check('assessment_type_code', sql `${t.code} ~ '^[A-Z][A-Z0-9_]{0,63}$'`), check('assessment_type_name', sql `length(btrim(${t.name}, ${planningWhitespace})) > 0`), check('assessment_type_version', sql `${t.rowVersion} > 0`)]);
+export const assessments = pgTable('assessments', {
+    ...tenant(), offeringId: uuid('offering_id').notNull(), academicYearId: uuid('academic_year_id').notNull(), termId: uuid('term_id'), assessmentTypeId: uuid('assessment_type_id').notNull(),
+    ...planningFields(), status: status(['draft'], 'draft'),
+}, t => [tenantKey(t), tenantFk(t, t.assessmentTypeId, assessmentTypes),
+    foreignKey({ name: 'assessment_offering_year_fk', columns: [t.schoolId, t.offeringId, t.academicYearId], foreignColumns: [subjectOfferings.schoolId, subjectOfferings.id, subjectOfferings.academicYearId] }).onDelete('restrict'),
+    foreignKey({ name: 'assessment_term_year_fk', columns: [t.schoolId, t.termId, t.academicYearId], foreignColumns: [terms.schoolId, terms.id, terms.academicYearId] }).onDelete('restrict'),
+    index('assessment_offering_idx').on(t.schoolId, t.offeringId, t.academicYearId), index('assessment_term_idx').on(t.schoolId, t.termId, t.academicYearId),
+    index('assessment_type_idx').on(t.schoolId, t.assessmentTypeId), index('assessment_year_idx').on(t.schoolId, t.academicYearId),
+    index('assessment_creator_idx').on(t.createdByActorId), index('assessment_updater_idx').on(t.updatedByActorId),
+    check('assessment_draft_status', sql `${t.status} = 'draft'`), ...planningChecks('assessment', t)]);
+export const assessmentTasks = pgTable('assessment_tasks', {
+    ...tenant(), assessmentId: uuid('assessment_id').notNull(), ordinal: integer('ordinal').notNull(), ...planningFields(),
+}, t => [tenantKey(t), tenantFk(t, t.assessmentId, assessments), unique().on(t.schoolId, t.assessmentId, t.ordinal),
+    index('assessment_task_creator_idx').on(t.createdByActorId), index('assessment_task_updater_idx').on(t.updatedByActorId),
+    check('assessment_task_ordinal', sql `${t.ordinal} between 1 and 100`), ...planningChecks('assessment_task', t)]);

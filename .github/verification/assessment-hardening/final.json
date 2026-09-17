@@ -1,0 +1,261 @@
+{
+  "date": "2026-09-16T19:59:06.258Z",
+  "ledger": [
+    {
+      "hash": "73a515ca20f3799803c9a43f55fa344650b8e97c508a0ec80b3881952ea086f1",
+      "created_at": "1789055155853"
+    },
+    {
+      "hash": "746d27b844f67c719a0ac66c9b839f453d6eaa0efbf765f8695b7511d77dbf40",
+      "created_at": "1789055280016"
+    },
+    {
+      "hash": "11f297244215247102984891e2c94503df9bc01e01fbc8960d982fded87ebcf7",
+      "created_at": "1789132588774"
+    },
+    {
+      "hash": "f76fa50915b180c9902e41f4bdc4ac2d6ff83e0258ead448463442e0d07f63d5",
+      "created_at": "1789399543265"
+    },
+    {
+      "hash": "94200b78e4115a78c6190f5f5d3e40fa2104e661633f533582ad1abf11d5b6d7",
+      "created_at": "1789399668490"
+    },
+    {
+      "hash": "936ef1479d9846338fadca9941b5ef5c1e7e714935df7d8fd14b9ae43bd51884",
+      "created_at": "1789569937401"
+    },
+    {
+      "hash": "58ae41ee0fd221ece6617b543c61af75289a06594d351f5b67903001b8c4c0c8",
+      "created_at": "1789569962935"
+    }
+  ],
+  "state": {
+    "neon_auth.account": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "neon_auth.invitation": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "neon_auth.jwks": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "neon_auth.member": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "neon_auth.organization": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "neon_auth.project_config": {
+      "count": 1,
+      "fingerprint": "36261d30c318c134eee0567123c809a9"
+    },
+    "neon_auth.session": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "neon_auth.user": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "neon_auth.verification": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "public.academic_years": {
+      "count": 1,
+      "fingerprint": "28accff0c36494e1ba1d09ad0bf55bc0"
+    },
+    "public.account": {
+      "count": 4,
+      "fingerprint": "1c20f245bbc9f955fffa886f960cfbf0"
+    },
+    "public.assessment_tasks": {
+      "count": 7,
+      "fingerprint": "a2e1f5c173b7edc5d559c0ad90e0dca4"
+    },
+    "public.assessment_types": {
+      "count": 5,
+      "fingerprint": "54fc913a351de207105aaccf532bd9a8"
+    },
+    "public.assessments": {
+      "count": 4,
+      "fingerprint": "58bb8a53bb80dbed0a253bdb63c99855"
+    },
+    "public.audit_actors": {
+      "count": 4,
+      "fingerprint": "010b8946cea72fc83c37037feb07dcf8"
+    },
+    "public.audit_events": {
+      "count": 41,
+      "fingerprint": "8b810cb4d614821b8c7225bb35fa5202"
+    },
+    "public.class_groups": {
+      "count": 1,
+      "fingerprint": "345c97e3e4839c4123d7da12a19b4abb"
+    },
+    "public.class_placements": {
+      "count": 5,
+      "fingerprint": "a2ab771e64ded631d0c86dfbfc15de5e"
+    },
+    "public.grades": {
+      "count": 1,
+      "fingerprint": "f430a62ee153675e0462110c3104c769"
+    },
+    "public.learner_admissions": {
+      "count": 5,
+      "fingerprint": "7eca434df9692425f02d4a7f200e7a5d"
+    },
+    "public.learner_enrolments": {
+      "count": 5,
+      "fingerprint": "4f05ac0c83ad6b5893f26cddbe9d4249"
+    },
+    "public.learner_subject_enrolments": {
+      "count": 13,
+      "fingerprint": "80eda8e06a14f9ba20f6d349f5005023"
+    },
+    "public.learners": {
+      "count": 5,
+      "fingerprint": "dda41fdbe9d9a4a138e18266a2faea6f"
+    },
+    "public.media_assets": {
+      "count": 4,
+      "fingerprint": "f1116e8e9ebf99469ec46e30b5263427"
+    },
+    "public.media_folders": {
+      "count": 2,
+      "fingerprint": "f4abe68bb7de232725173447e42a28e9"
+    },
+    "public.membership_roles": {
+      "count": 3,
+      "fingerprint": "59af4a90a4ee73f1c9912104fb95f490"
+    },
+    "public.roles": {
+      "count": 3,
+      "fingerprint": "2a94f92218e3b3d3b6b9fcef9c0d0840"
+    },
+    "public.school_memberships": {
+      "count": 3,
+      "fingerprint": "bda1140daa9779146145e2166311155b"
+    },
+    "public.school_subjects": {
+      "count": 3,
+      "fingerprint": "cd605aa5179ad320b12cb2eb7d37a331"
+    },
+    "public.schools": {
+      "count": 1,
+      "fingerprint": "c88f56f1970f20694dd516dcdeb73bfc"
+    },
+    "public.session": {
+      "count": 1,
+      "fingerprint": "49104e867635b54081a9c4ce4ccf61d4"
+    },
+    "public.staff_profiles": {
+      "count": 3,
+      "fingerprint": "2ac0cd4451b147ecba6a64abedaaf2ee"
+    },
+    "public.subject_catalogue": {
+      "count": 3,
+      "fingerprint": "e3170713ebd4230d5712d962764ade1c"
+    },
+    "public.subject_grades": {
+      "count": 3,
+      "fingerprint": "b32a7a909d0a2a6f57363926808e1eab"
+    },
+    "public.subject_offerings": {
+      "count": 3,
+      "fingerprint": "b6e9420a774c76b035f0a7516971d485"
+    },
+    "public.teacher_assignments": {
+      "count": 3,
+      "fingerprint": "05ae1336959dd279f46d1f33e74685e1"
+    },
+    "public.terms": {
+      "count": 3,
+      "fingerprint": "c965b2f5c9ec57530db1153ac47a165a"
+    },
+    "public.user": {
+      "count": 4,
+      "fingerprint": "86d94643480ef1b37fecb949c70e2ed0"
+    },
+    "public.verification": {
+      "count": 0,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+  },
+  "invalid": {
+    "assessments": 0,
+    "assessment_tasks": 0,
+    "assessment_types": 0
+  },
+  "tasks": [
+    {
+      "id": "0f2addea-3599-43ff-ac25-09a97a87bfe2",
+      "school_id": "fd4d020e-064c-404a-8086-4db6ca738936",
+      "assessment_id": "76787ae9-0844-445c-862c-bffc8efdcab0",
+      "ordinal": 1,
+      "created_at": "2026-09-15T07:19:32.929Z",
+      "created_by_actor_id": "8c554993-b1a1-4a4c-81a3-a281ee52514d",
+      "row_version": "1"
+    },
+    {
+      "id": "1b22552c-742c-4ea4-a301-a3bae6f6ddcd",
+      "school_id": "fd4d020e-064c-404a-8086-4db6ca738936",
+      "assessment_id": "76787ae9-0844-445c-862c-bffc8efdcab0",
+      "ordinal": 2,
+      "created_at": "2026-09-15T07:19:32.929Z",
+      "created_by_actor_id": "8c554993-b1a1-4a4c-81a3-a281ee52514d",
+      "row_version": "1"
+    },
+    {
+      "id": "bd9a6bdd-e334-466a-9607-59f93ab821e9",
+      "school_id": "fd4d020e-064c-404a-8086-4db6ca738936",
+      "assessment_id": "829f9860-7ba1-41d3-bfc2-dd29d2a1a7fc",
+      "ordinal": 1,
+      "created_at": "2026-09-15T07:25:56.027Z",
+      "created_by_actor_id": "8c554993-b1a1-4a4c-81a3-a281ee52514d",
+      "row_version": "1"
+    },
+    {
+      "id": "17168d45-7a63-460a-b6b9-193b0abc8bf3",
+      "school_id": "fd4d020e-064c-404a-8086-4db6ca738936",
+      "assessment_id": "829f9860-7ba1-41d3-bfc2-dd29d2a1a7fc",
+      "ordinal": 2,
+      "created_at": "2026-09-15T07:25:56.027Z",
+      "created_by_actor_id": "8c554993-b1a1-4a4c-81a3-a281ee52514d",
+      "row_version": "1"
+    },
+    {
+      "id": "bf656840-7577-4fe6-b8e5-48e0e5d605e1",
+      "school_id": "fd4d020e-064c-404a-8086-4db6ca738936",
+      "assessment_id": "9aada269-bdb0-4c0b-9c03-c8787d6f18a5",
+      "ordinal": 1,
+      "created_at": "2026-09-16T19:55:16.761Z",
+      "created_by_actor_id": "8c554993-b1a1-4a4c-81a3-a281ee52514d",
+      "row_version": "3"
+    },
+    {
+      "id": "0161cc99-38a5-444d-a8e9-b56ff08cd200",
+      "school_id": "fd4d020e-064c-404a-8086-4db6ca738936",
+      "assessment_id": "9aada269-bdb0-4c0b-9c03-c8787d6f18a5",
+      "ordinal": 2,
+      "created_at": "2026-09-16T19:56:06.299Z",
+      "created_by_actor_id": "8c554993-b1a1-4a4c-81a3-a281ee52514d",
+      "row_version": "2"
+    },
+    {
+      "id": "22fcdf65-0ad9-4ebf-a770-2e379d60b7ed",
+      "school_id": "fd4d020e-064c-404a-8086-4db6ca738936",
+      "assessment_id": "d470482d-3519-4574-b23c-240e53f14bd2",
+      "ordinal": 1,
+      "created_at": "2026-09-16T13:03:45.259Z",
+      "created_by_actor_id": "8c554993-b1a1-4a4c-81a3-a281ee52514d",
+      "row_version": "1"
+    }
+  ]
+}

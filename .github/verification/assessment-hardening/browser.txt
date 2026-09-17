@@ -1,0 +1,32 @@
+node : (node:12960) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of
+file:///<workspace>/lib/domain/assessments.ts is not specified and it doesn't
+parse as CommonJS.
+At line:2 char:46
++ ... host:3001'; node scripts/assessment-browser-smoke.mjs --retain-test-e ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:12960) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to
+\\?\<workspace>\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12960) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+{"identity":{"original":["bf656840-7577-4fe6-b8e5-48e0e5d605e1","f5367b8c-2441-4f46-beb6-9bc0aec9cf53"],"reordered":["f5367b8c-2441-4f46-beb6-9bc0aec9cf53","bf656840-7577-4fe6-b8e5-48e0e5d605e1"],"added":["f5367b8c-2441-4f46-beb6-9bc0aec9cf53","bf656840-7577-4fe6-b8e5-48e0e5d605e1","0161cc99-38a5-444d-a8e9-b56ff08cd200"],"removed":["bf656840-7577-4fe6-b8e5-48e0e5d605e1","0161cc99-38a5-444d-a8e9-b56ff08cd200"]}}
+PASS real concurrent transactions: one commit and one controlled conflict
+{
+  "result": "PASS",
+  "runId": "fa6247c4-44f4-41e3-afd6-8380816835fe",
+  "draftId": "9aada269-bdb0-4c0b-9c03-c8787d6f18a5",
+  "retained": "one synthetic draft, two tasks, initialized types if absent, and audit history; no R2 operations",
+  "coverage": "real create/reload/edit/reorder actions, cross-term dates, stale conflict, concurrent transactions, teacher/moderator/anonymous/foreign-school pages, 390px form"
+}

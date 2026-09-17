@@ -3,6 +3,12 @@ import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
 import { foundationService } from './foundation'
 import { administrationService } from './administration'
+import { assessmentService } from './assessments'
+
+export const assessments = assessmentService(pool, async () => {
+  const session = await auth.api.getSession({ headers: await headers() })
+  return session?.user.id ?? null
+})
 
 export const foundation = foundationService(pool, async () => {
   const session = await auth.api.getSession({ headers: await headers() })

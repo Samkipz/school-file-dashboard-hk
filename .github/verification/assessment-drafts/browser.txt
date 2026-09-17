@@ -1,0 +1,31 @@
+node : (node:6212) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of
+file:///<workspace>/lib/domain/assessments.ts is not specified and it doesn't
+parse as CommonJS.
+At line:4 char:1
++ node scripts/assessment-browser-smoke.mjs --retain-test-evidence 2>&1 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:6212) [MO...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to
+\\?\<workspace>\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6212) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+PASS real concurrent transactions: one commit and one controlled conflict
+{
+  "result": "PASS",
+  "runId": "572f737e-447e-4eeb-9453-5fdda9210304",
+  "draftId": "829f9860-7ba1-41d3-bfc2-dd29d2a1a7fc",
+  "retained": "one synthetic draft, two tasks, initialized types if absent, and audit history; no R2 operations",
+  "coverage": "real create/reload/edit/reorder actions, cross-term dates, stale conflict, concurrent transactions, teacher/moderator/anonymous/foreign-school pages, 390px form"
+}

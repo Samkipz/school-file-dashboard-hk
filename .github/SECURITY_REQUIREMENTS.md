@@ -1,5 +1,19 @@
 # SchoolHub Security Requirements
 
+## Stable task identity (2026-09-16)
+
+Submitted task UUIDs are untrusted claims: syntax alone is insufficient. Resolve every claimed ID against the authorized school/draft, reject duplicates and foreign/unknown IDs, and preserve parent/creation identity. Structural task audit data excludes text and commits with all parent/child writes. Referenced-task deletion/correction policy requires approval before task dependents exist. See [hardening verification](ASSESSMENT_DRAFT_HARDENING.md).
+
+## Admin-only assessment drafts (2026-09-14)
+
+The draft slice uses the existing verified school/session boundary and requires effective School Admin for every assessment/type read and command. Teachers (including assigned teachers), moderator-only and cross-school callers receive no draft permission. Composite tenant/year FKs, cross-row date guards, aggregate optimistic revisions and transactional audit protect planning writes. See [implementation and actual verification](ASSESSMENT_FIRST_SLICE_IMPLEMENTATION.md). Evidence associations and retention/archive guards are still deferred.
+
+## Portfolio/media and evidence policy update (2026-09-14)
+
+The restored file service enforces school membership, admin-only mutations and current-roster teacher reads; private downloads authorize the asset before reading R2. See [portfolio implementation](PORTFOLIO_MEDIA_IMPLEMENTATION.md). The older foundation-only and pre-foundation descriptions below are historical.
+
+The owner approved preserving assessment-linked evidence, blocking archive while referenced, current-assignment teacher access and historical school-admin access. See [evidence decisions](ASSESSMENT_EVIDENCE_DECISIONS.md) for proposed integrity/concurrency requirements. Assessment associations and their archive guards remain unimplemented; this policy approval is not a claim of existing protection for a future assessment feature.
+
 ## Implemented foundation controls (2026-09-10)
 
 See the [foundation implementation record](FOUNDATION_SLICE_IMPLEMENTATION.md) for verified controls and limits. Active school/membership/role, dated staff allocation and learner participation now gate domain access. Composite school/context FKs reject invalid relationships; mutations and safe audit events share a transaction. All legacy table/R2 actions are disabled before access. Better Auth uses its native Next.js handler without credentialed origin reflection or wildcard bypass. RLS, production runtime DB privileges, onboarding and secured asset workflows remain deferred. Registration alone grants no school access.

@@ -32,14 +32,14 @@ try {
   assert.equal(page.status,200)
   assert.match(await page.text(),/Grade 10 East/)
   const media = await request('/media-files/file/unknown')
-  assert.equal(media.status,410)
-  assert.equal(media.headers.get('Cache-Control'),'no-store')
+  assert.equal(media.status,400)
+  assert.equal(media.headers.get('Cache-Control'),'private, no-store')
   const logout = await request('/api/auth/sign-out',{})
   assert.equal(logout.status,200)
   assert.equal(await (await request('/api/auth/get-session')).json(),null)
   cookieJar.set('better-auth.session_token','invalid')
   assert.equal(await (await request('/api/auth/get-session')).json(),null)
-  console.log('Auth smoke PASS: unauthenticated redirect, rejected origin/password, login, session, academic page, disabled media route, logout and invalid session')
+  console.log('Auth smoke PASS: unauthenticated redirect, rejected origin/password, login, session, academic page, invalid private media request, logout and invalid session')
 } catch (error) {
   console.error({ error:error.name, message:error.message })
   process.exitCode = 1

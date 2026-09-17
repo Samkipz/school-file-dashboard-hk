@@ -1,0 +1,79 @@
+node : (node:12040) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of
+file:///<workspace>/lib/domain/assessments.ts is not specified and it doesn't
+parse as CommonJS.
+At line:2 char:1
++ node scripts/assessment-integration.mjs --review-migration 2>&1 | Tee ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:12040) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to
+\\?\<workspace>\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12040) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+Generated schema and companion guards applied inside rollback-only review transaction
+PASS admin initializes five configurable types idempotently
+PASS create grade 10 draft with ordered tasks and cross-term dates
+PASS reload persisted complete draft
+PASS edit and reorder task definitions
+PASS stale update cannot overwrite
+PASS draft permits no tasks, term or dates
+PASS service rejects invalid draft starts_on
+PASS service rejects invalid draft due_on
+PASS service rejects invalid draft tasks
+PASS service rejects invalid draft title
+PASS service rejects invalid draft tasks
+PASS audit failure rolls back create and edit including tasks
+PASS custom type create/edit, stale version, disabled selection
+PASS database rejects wrong-year term
+PASS database rejects wrong offering year even without term
+PASS database rejects assessment outside year
+PASS database rejects task outside year
+PASS database rejects reversed dates
+PASS database rejects future status
+PASS database rejects blank title
+PASS database rejects title length
+PASS database rejects invalid ordinal
+PASS database rejects ordering gaps
+PASS database rejects duplicate ordinals
+PASS database restricts referenced offering deletion
+PASS foreign offering rejected by service
+PASS database rejects foreign offering
+PASS database rejects foreign type
+PASS other-school access denied without membership
+PASS dual-school admin cannot read or edit draft through foreign school
+PASS database rejects foreign task parent
+PASS grade 11 uses identical service and schema
+PASS parent year edits cannot invalidate assessment dates
+PASS direct task change advances aggregate version and conflicts stale form
+PASS teacher denied read
+PASS teacher denied get
+PASS teacher denied create
+PASS teacher denied edit
+PASS teacher denied types
+PASS teacher denied save type
+PASS moderator denied read
+PASS moderator denied get
+PASS moderator denied create
+PASS moderator denied edit
+PASS moderator denied types
+PASS moderator denied save type
+PASS anonymous denied read
+PASS anonymous denied get
+PASS anonymous denied create
+PASS anonymous denied edit
+PASS anonymous denied types
+PASS anonymous denied save type
+PASS inactive membership denied read and write
+PASS revoked admin role denied
+Assessment integration PASS: 54 checks; all fixture mutations and audit events rolled back

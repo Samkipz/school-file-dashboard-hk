@@ -1,0 +1,12 @@
+
+> my-project@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.11 <workspace>
+
+
+ Test Files  12 passed (12)
+      Tests  96 passed (96)
+   Start at  17:49:52
+   Duration  5.73s (transform 2.16s, setup 775ms, import 4.91s, tests 1.10s, environment 4ms)

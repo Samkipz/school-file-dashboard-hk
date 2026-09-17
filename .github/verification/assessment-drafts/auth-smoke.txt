@@ -1,0 +1,1 @@
+Auth smoke PASS: unauthenticated redirect, rejected origin/password, login, session, academic page, invalid private media request, logout and invalid session

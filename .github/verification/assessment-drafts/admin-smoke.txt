@@ -1,0 +1,1 @@
+Administration HTTP smoke PASS: anonymous redirect, admin page render, invalid school handling, teacher/moderator denial without learner disclosure

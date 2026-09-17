@@ -1,0 +1,6 @@
+ALTER TABLE "assessment_tasks" DROP CONSTRAINT "assessment_task_title";--> statement-breakpoint
+ALTER TABLE "assessment_types" DROP CONSTRAINT "assessment_type_name";--> statement-breakpoint
+ALTER TABLE "assessments" DROP CONSTRAINT "assessment_title";--> statement-breakpoint
+ALTER TABLE "assessment_tasks" ADD CONSTRAINT "assessment_task_title" CHECK (length(btrim("assessment_tasks"."title", U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')) > 0);--> statement-breakpoint
+ALTER TABLE "assessment_types" ADD CONSTRAINT "assessment_type_name" CHECK (length(btrim("assessment_types"."name", U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')) > 0);--> statement-breakpoint
+ALTER TABLE "assessments" ADD CONSTRAINT "assessment_title" CHECK (length(btrim("assessments"."title", U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')) > 0);

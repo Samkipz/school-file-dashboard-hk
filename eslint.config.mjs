@@ -10,5 +10,5 @@ export default defineConfig([
     files: ['app/api/auth/**/route.ts'],
     rules: { '@typescript-eslint/no-explicit-any': 'warn' },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts']),
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts', '.kilo/worktrees/**']),
 ])

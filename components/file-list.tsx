@@ -17,7 +17,7 @@ export function FileList({ school, files, canManage, reload }: { school: string;
     </div>
     {editing===f.id && <form className="space-y-2" onSubmit={e=>{e.preventDefault();const d=new FormData(e.currentTarget);void run(()=>updateFileMetadata(school,f.id,String(d.get('title')),String(d.get('description')),String(d.get('category'))))}}>
       <label className="block">Title<Input name="title" defaultValue={f.title} required maxLength={160}/></label><label className="block">Description<Input name="description" defaultValue={f.description??''} maxLength={1000}/></label>
-      <label className="block">Category<select name="category" defaultValue={f.category} className="border rounded-md bg-background p-2">{['general','work','certificate','photo','video'].map(c=><option key={c}>{c}</option>)}</select></label><Button disabled={busy}>Save details</Button>
+      <label className="block">Category<select name="category" defaultValue={f.category} className="border rounded-md bg-background p-2">{['general','work','certificate','photo','video'].map(c=><option key={c}>{c}</option>)}</select></label><Button type="submit" disabled={busy}>Save details</Button>
     </form>}
   </div>)}</div>
 }

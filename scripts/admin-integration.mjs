@@ -145,10 +145,25 @@ try {
     assert.ok(await row('class_placements', transferred))
   })
   await test('meaningful mutations have safe grouped audit records', async () => {
-    const audit = (await client.query("SELECT event_type, count(*)::int AS n FROM audit_events WHERE school_id=$1 AND event_type LIKE 'academics.%' GROUP BY event_type", [school])).rows
+    // Resolve complete commands through this run's newly-created resource IDs.
+    // Concurrent or historical operations on other resources cannot affect counts.
+    const events = (await client.query(`SELECT * FROM audit_events WHERE school_id=$1 AND command_id IN (
+      SELECT command_id FROM audit_events WHERE school_id=$1 AND resource_id=ANY($2::uuid[])
+      AND event_type IN ('academics.admit','academics.transfer','academics.replaceAssignment')
+    )`, [school,[admission,transferred,replacement]])).rows
+    const audit = [...new Set(events.map(e => e.event_type))].map(event_type => ({event_type,n:events.filter(e => e.event_type === event_type).length}))
     assert.ok(audit.find(r => r.event_type === 'academics.transfer' && r.n === 3))
     assert.ok(audit.find(r => r.event_type === 'academics.replaceAssignment' && r.n === 2))
     assert.ok(audit.find(r => r.event_type === 'academics.admit' && r.n === 1))
+    const admitted = events.filter(e => e.event_type === 'academics.admit')
+    assert.equal(admitted[0].resource_id, admission)
+    assert.equal(admitted[0].resource_type, 'learner_admissions')
+    for (const event of ['academics.transfer','academics.replaceAssignment','academics.admit']) {
+      const group = events.filter(e => e.event_type === event).sort((a,b) => a.sequence-b.sequence)
+      assert.equal(new Set(group.map(e => e.command_id)).size, 1)
+      assert.deepEqual(group.map(e => e.sequence), group.map((_,i) => i+1))
+      assert.ok(group.every(e => e.actor_id === id('actor-admin') && e.membership_id === id('membership-admin')))
+    }
   })
   await test('audit failure rolls back all workflow changes', async () => {
     const failing = { ...adapter, connect: async () => { const c = await adapter.connect(); return { ...c, query: (sql, values) => sql.startsWith('INSERT INTO audit_events') ? Promise.reject(new Error('audit unavailable')) : c.query(sql, values) } } }

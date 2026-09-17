@@ -1,0 +1,3 @@
+PASS original assessments rows match preflight fingerprints after excluding only this browser draft and its tasks/audit
+PASS original assessment_tasks rows match preflight fingerprints after excluding only this browser draft and its tasks/audit
+PASS original audit_events rows match preflight fingerprints after excluding only this browser draft and its tasks/audit

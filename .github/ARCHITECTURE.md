@@ -1,5 +1,17 @@
 # SchoolHub Architecture
 
+## Draft identity hardening (2026-09-16)
+
+Draft saves reconcile retained/new/removed tasks inside the existing parent revision and SERIALIZABLE transaction, preserving retained UUIDs and creation provenance. An additive custom migration defers ordinal uniqueness while retaining the final positive/unique/contiguous 1–100 ordering contract. Application and database nonblank checks share the ECMAScript whitespace set. Future task dependents require an approved deletion/correction lifecycle. See [implementation and checks](ASSESSMENT_DRAFT_HARDENING.md).
+
+## Assessment draft planning (2026-09-14)
+
+School Admin draft planning now composes the existing session-bound foundation transaction in `lib/domain/assessments.ts`, with `/admin/assessments` and thin Server Actions. The shared grade-agnostic schema adds `assessment_types`, `assessments`, and ordered `assessment_tasks`. Composite offering/year and optional term/year FKs enforce context; PostgreSQL guards enforce year-bound dates and aggregate revision changes. Dates may span terms. Only draft status and admin access exist. See [implementation, migration and verification record](ASSESSMENT_FIRST_SLICE_IMPLEMENTATION.md); later assessment phases remain deferred.
+
+## Current progress index
+
+Read [PROJECT_LOG.md](PROJECT_LOG.md) for current delivery state. Later administration, lifecycle and portfolio/media implementation records supersede the foundation-only snapshot below. `lib/domain/server.ts` binds session identity to the foundation, administration and file services; `media_assets` and `media_folders` are authoritative storage metadata. The approved future [assessment evidence policy](ASSESSMENT_EVIDENCE_DECISIONS.md) reuses those assets; assessment associations are not yet implemented.
+
 ## Evidence labels
 
 **FACT** is observed code. **INFERENCE** is a conclusion from that code. **REQUIREMENT** is supplied project direction. **RECOMMENDATION** is a proposed design decision.

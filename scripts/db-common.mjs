@@ -16,6 +16,7 @@ export function developmentPool() {
 }
 export const foundationTables = ['schools','audit_actors','school_memberships','roles','membership_roles','staff_profiles','learners','learner_admissions','academic_years','terms','grades','class_groups','learner_enrolments','class_placements','subject_catalogue','subject_grades','school_subjects','subject_offerings','learner_subject_enrolments','teacher_assignments','audit_events']
 export const mediaTables = ['media_assets','media_folders']
+export const assessmentTables = ['assessment_types','assessments','assessment_tasks']
 export const authTables = ['user','session','account','verification']
 export const legacyTables = ['folders','files','announcements','events','activity_logs','students','portfolioFiles']
 export function safeFailure(error) {

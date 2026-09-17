@@ -1,0 +1,75 @@
+node.exe : (node:16640) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of
+file:///<workspace>/lib/domain/foundation.ts is not specified and it doesn't
+parse as CommonJS.
+At line:2 char:214
++ ... nScripts) { & node "scripts/$assessmentRegressionScript.mjs" 2>&1 | T ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:16640) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to
+\\?\<workspace>\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16640) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+PASS cross-school staff membership FK
+PASS cross-school admission learner FK
+PASS admission numbers cannot be reused
+PASS wrong learner admission context
+PASS overlapping terms
+PASS term outside year
+PASS overlapping active years
+PASS overlapping class placement
+PASS wrong class placement context
+PASS wrong learner subject context
+PASS overlapping subject enrolment
+PASS overlapping teacher assignment
+PASS overlapping bounded role grant
+PASS unknown lifecycle status
+PASS blank learner name
+PASS invalid timezone
+PASS curriculum mismatch
+PASS platform grant rejected
+PASS audit events cannot be updated
+PASS audit events cannot be deleted
+PASS audit events cannot be truncated
+PASS actors cannot be rewritten
+PASS referenced learners cannot be deleted
+PASS auth identity cannot cascade into academic history
+PASS actor school membership checked
+PASS same-school wrong offering class context
+PASS teacher sees only its school
+PASS teacher sees 3 assigned offerings
+PASS assigned teacher sees 4 enrolled learners
+PASS cross-school read denied
+PASS unknown offering denied
+PASS real foreign-school offering denied with own school ID
+PASS same-school unassigned offering denied
+PASS teacher cannot rename learners
+PASS revoked teacher assignment denied
+PASS expired teacher assignment denied
+PASS inactive staff denied
+PASS suspended membership denied
+PASS revoked role denied
+PASS expired role denied
+PASS future role denied
+PASS closed school denied
+PASS withdrawn learner excluded
+PASS Moderator role alone does not grant teacher roster access
+PASS second teacher cannot use another staff assignment
+PASS admin can view school context
+PASS admin rename increments version and writes audit atomically
+PASS stale version rejected
+PASS cross-school mutation denied
+PASS audit failure rolls back learner mutation
+PASS missing session denied
+Integration PASS: 51 checks; all test fixtures and mutations rolled back

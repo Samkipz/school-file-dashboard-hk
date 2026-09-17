@@ -1,0 +1,22 @@
+node : (node:13740) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as
+aliases for 'verify-full'.
+At line:2 char:1
++ node scripts/files-browser-smoke.mjs --retain-test-evidence 2>&1 | Te ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:13740) Wa... 'verify-full'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS admin portfolio: learner selection, real upload, Download click and SHA-256, metadata edit, mobile layout
+PASS teacher: assigned portfolio read-only UI, real Download click, general media denied
+PASS moderator: portfolio denied without learner disclosure
+PASS media: folder create/edit, real upload/download, mobile layout, nonempty archive rejected, synthetic assets/folder archived, archived downloads HTTP 404
+Portfolio/media browser smoke PASS: Browser acceptance bc781ab7-ad93-460e-90e3-8f7729f68eec; two synthetic objects retained with archived metadata; no existing assets changed

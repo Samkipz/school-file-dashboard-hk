@@ -1,5 +1,11 @@
 # SchoolHub Roadmap
 
+September 16 bounded follow-up: repair the independent draft verification findings and establish stable task identity; see [hardening status](ASSESSMENT_DRAFT_HARDENING.md). Do not advance assessment features from this work. Before implementing any task-dependent model, review and approve the referenced-task deletion/correction lifecycle.
+
+## Current assessment update (2026-09-14)
+
+The first bounded portion of Phase 4, School Admin draft planning, is implemented locally; see [actual verification and limits](ASSESSMENT_FIRST_SLICE_IMPLEMENTATION.md). It adds configurable types, drafts and ordered tasks, with admin-only access. It does not complete Phase 4 or establish Grade 10 SBA compliance. Stop for independent verification and human review before teacher release, attempts/evidence or scoring. The foundation snapshot below is historical; use [PROJECT_LOG](PROJECT_LOG.md) for current delivery status.
+
 ## Foundation delivery update — 2026-09-10
 
 The [first foundation slice](FOUNDATION_SLICE_IMPLEMENTATION.md) implements the school/academic schema portions of Phases 1–3, clean development migrations/seeds, server authorization and an Academics read view. Full onboarding and academic administration workflows remain. Legacy feature reintegration, R2, assessments, moderation and reporting are not delivered by this slice. The next implementation step is audited school-admin academic workflows and forms.

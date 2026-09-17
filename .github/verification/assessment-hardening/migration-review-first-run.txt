@@ -1,0 +1,158 @@
+node : (node:16420) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of
+file:///<workspace>/lib/domain/assessments.ts is not specified and it doesn't
+parse as CommonJS.
+At line:2 char:1
++ node scripts/assessment-integration.mjs --review-forward 2>&1 | Tee-O ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:16420) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to
+\\?\<workspace>\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16420) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for
+'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+PASS forward migration rollback review preserves existing task rows byte-for-byte
+PASS admin initializes five configurable types idempotently
+PASS create grade 10 draft with ordered tasks and cross-term dates
+PASS reload persisted complete draft
+PASS unchanged task save preserves IDs and creation provenance
+PASS task text edit preserves identity and provenance
+PASS edit and reorder task definitions with stable IDs
+{"originalTasks":["ba6a0987-378c-4b70-99ed-334f2c64f527","0f5f6a2b-9aa6-4e87-9562-3a09f7f03a60"],"reordered":["0f5f6a2b-9aa6-4e87-9562-3a09f7f03a60","ba6a0987-378c-4b70-99ed-334f2c64f527"],"addedThenRemoved":"b1a8a52d-ae3a-4fb4-8028-e972a6ab82ee"}
+PASS add creates exactly one new ID and remove retains remaining IDs
+PASS duplicate task IDs rejected without mutation
+PASS case-folded duplicate task IDs rejected without mutation
+PASS unknown task IDs rejected without mutation
+PASS creation rejects client-supplied task IDs
+PASS foreign-assessment task ID rejected
+PASS structural audit records IDs and order without text
+PASS stale update cannot overwrite
+PASS draft permits no tasks, term or dates
+PASS service rejects invalid draft starts_on
+PASS service rejects invalid draft due_on
+PASS service rejects invalid draft tasks
+PASS service rejects invalid draft title
+PASS service rejects invalid draft tasks
+PASS audit failure rolls back create and edit including tasks
+PASS audit failure rolls back combined inserts updates deletes reorder and parent revision
+PASS custom type create/edit, stale version, disabled selection
+PASS database rejects wrong-year term
+PASS database rejects wrong offering year even without term
+PASS database rejects assessment outside year
+PASS database rejects task outside year
+PASS database rejects reversed dates
+PASS database rejects future status
+PASS database rejects blank title
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace "\t"
+PASS assessments rejects whitespace "\n"
+PASS assessments rejects whitespace " \t\r\n   ﻿"
+PASS assessments rejects whitespace "\t"
+PASS assessments rejects whitespace "\n"
+PASS assessments rejects whitespace "\u000b"
+PASS assessments rejects whitespace "\f"
+PASS assessments rejects whitespace "\r"
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace " "
+PASS assessments rejects whitespace "　"
+PASS assessments rejects whitespace "﻿"
+PASS assessments accepts normal and non-trim Unicode text
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace "\t"
+PASS assessment_tasks rejects whitespace "\n"
+PASS assessment_tasks rejects whitespace " \t\r\n   ﻿"
+PASS assessment_tasks rejects whitespace "\t"
+PASS assessment_tasks rejects whitespace "\n"
+PASS assessment_tasks rejects whitespace "\u000b"
+PASS assessment_tasks rejects whitespace "\f"
+PASS assessment_tasks rejects whitespace "\r"
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace " "
+PASS assessment_tasks rejects whitespace "　"
+PASS assessment_tasks rejects whitespace "﻿"
+PASS assessment_tasks accepts normal and non-trim Unicode text
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace "\t"
+PASS assessment_types rejects whitespace "\n"
+PASS assessment_types rejects whitespace " \t\r\n   ﻿"
+PASS assessment_types rejects whitespace "\t"
+PASS assessment_types rejects whitespace "\n"
+PASS assessment_types rejects whitespace "\u000b"
+PASS assessment_types rejects whitespace "\f"
+PASS assessment_types rejects whitespace "\r"
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace " "
+PASS assessment_types rejects whitespace "　"
+PASS assessment_types rejects whitespace "﻿"
+PASS assessment_types accepts normal and non-trim Unicode text
+PASS database rejects ordinal zero
+PASS database rejects title length
+PASS database rejects invalid ordinal
+PASS database rejects ordering gaps
+{
+  error: 'AssertionError',
+  code: 'ERR_ASSERTION',
+  message: 'The validation function is expected to return "true". Received false\n' +
+    '\n' +
+    'Caught error:\n' +
+    '\n' +
+    'error: Task ordering must be contiguous'
+}

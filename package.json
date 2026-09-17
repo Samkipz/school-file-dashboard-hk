@@ -22,7 +22,10 @@
     "test:concurrency": "node scripts/db-concurrency.mjs",
     "test:auth": "node scripts/auth-smoke.mjs",
     "test:lifecycle": "node scripts/lifecycle-integration.mjs",
-    "test:files": "node scripts/files-integration.mjs"
+    "test:files": "node scripts/files-integration.mjs",
+    "test:files:browser": "node scripts/files-browser-smoke.mjs",
+    "test:assessments": "node scripts/assessment-integration.mjs",
+    "test:assessments:browser": "node scripts/assessment-browser-smoke.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1089.0",

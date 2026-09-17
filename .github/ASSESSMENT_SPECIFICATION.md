@@ -2,9 +2,11 @@
 
 ## Scope and status
 
-Foundation update (2026-09-10): the parent school, learner, year, class, subject and teacher-assignment schema is now implemented; see [foundation delivery](FOUNDATION_SLICE_IMPLEMENTATION.md). Assessment tables, scoring, moderation and reporting remain unimplemented and outside this slice.
+September 16 hardening: retained draft tasks use stable UUIDs across edits and reorder. IDs must resolve to the authorized draft; new IDs are server-generated. Current draft-only removal is not a future referenced-task policy. **A referenced-task deletion/correction lifecycle must be reviewed and approved before dependent records are implemented.** See [hardening and verification](ASSESSMENT_DRAFT_HARDENING.md).
 
-- **FACT:** No assessment domain exists in the present repository.
+Draft planning update (2026-09-14): School Admin draft planning is implemented locally; see [implementation and verification](ASSESSMENT_FIRST_SLICE_IMPLEMENTATION.md). Configurable assessment types, draft assessments and ordered tasks reuse the existing academic foundation. Teacher release, attempts/evidence, scoring, moderation and reporting remain unimplemented.
+
+- **FACT:** The first assessment domain slice is admin-only draft planning. The broader target workflow below is not a claim that later stages exist.
 - **REQUIREMENT:** Grade 10 is the initial delivery scope; Grades 11 and 12 must use the same academic and assessment domain.
 - **RECOMMENDATION:** This document is the target domain specification. Its framework-specific rules, weights, required tasks, retention periods, and approval rules require a cited official assessment framework before implementation.
 
@@ -46,6 +48,8 @@ Foundation update (2026-09-10): the parent school, learner, year, class, subject
 
 ## Workflow and permissions
 
+**FIRST-SLICE BOUNDARY (2026-09-14):** All assessment draft reads/mutations require School Admin. Assigned teachers and moderator-only callers have no access. The teacher workflow below requires a later approved release implementation. Optional assessment/task dates fit the offering academic year and are ordered when both exist. Term is classification only, bound to that same year; dates need not fit the term. These are technical domain rules, not official SBA rules.
+
 ```text
 Assessment creation
   -> Task definition
@@ -73,9 +77,10 @@ Assessment creation
 
 ## Portfolio and evidence integration
 
-- **FACT:** Existing `portfolioFiles` store learner-linked R2 object metadata; generic `files` store folder-linked metadata.
+- **FACT (2026-09-14):** Restored portfolios/media use school-scoped `media_assets` and `media_folders`; legacy `portfolioFiles`/`files` are not authoritative. See [portfolio implementation](PORTFOLIO_MEDIA_IMPLEMENTATION.md).
 - **REQUIREMENT:** Do not duplicate file storage for assessment evidence.
-- **RECOMMENDATION:** Introduce a reusable school-scoped file asset and an evidence/attachment reference. Portfolio and assessment records reference the same asset when appropriate.
+- **APPROVED POLICY (2026-09-14):** Preserve referenced evidence, block asset archival while referenced, require current assignments for teacher access and retain school-admin historical access. See [evidence decisions and proposed implementation contract](ASSESSMENT_EVIDENCE_DECISIONS.md). Association implementation remains pending.
+- **RECOMMENDATION:** Add an evidence association referencing the existing asset with same-school and same-learner integrity; reuse stored bytes.
 - **REQUIREMENT:** Evidence supports permitted documents, images, videos, audio, and other approved educational evidence.
 - **RECOMMENDATION:** Evidence access must inherit the linked school, learner enrolment, assessment task, teacher assignment, lifecycle, and role rules.
 

@@ -1,0 +1,57 @@
+node : (node:10124) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as
+aliases for 'verify-full'.
+At line:12 char:6
++ '@ | node --input-type=module 2>&1 | Tee-Object .github/verification/ ...
++      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:10124) Wa... 'verify-full'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "counts": {
+    "learners": 4,
+    "media_assets": 4,
+    "media_folders": 1,
+    "assessment_types": 5,
+    "assessments": 2,
+    "assessment_tasks": 4,
+    "audit_events": 26
+  },
+  "drafts": [
+    {
+      "id": "76787ae9-0844-445c-862c-bffc8efdcab0",
+      "status": "draft",
+      "row_version": "8",
+      "task_count": 2
+    },
+    {
+      "id": "829f9860-7ba1-41d3-bfc2-dd29d2a1a7fc",
+      "status": "draft",
+      "row_version": "18",
+      "task_count": 2
+    }
+  ],
+  "assessmentAudits": [
+    {
+      "event_type": "assessment.created",
+      "count": 2
+    },
+    {
+      "event_type": "assessment.updated",
+      "count": 4
+    },
+    {
+      "event_type": "assessment_type.created",
+      "count": 5
+    }
+  ],
+  "migrations": 5
+}

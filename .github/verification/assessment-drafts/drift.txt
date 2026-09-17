@@ -1,0 +1,40 @@
+
+> my-project@0.1.0 db:generate
+> drizzle-kit generate
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '<workspace>\drizzle.config.ts'
+◇ injected env (27) from .env.local // tip: ◈ encrypted .env [www.dotenvx.com]
+30 tables
+academic_years 12 columns 1 indexes 3 fks
+account 13 columns 0 indexes 1 fks
+assessment_tasks 14 columns 2 indexes 4 fks
+assessment_types 11 columns 2 indexes 3 fks
+assessments 17 columns 6 indexes 6 fks
+audit_actors 5 columns 1 indexes 1 fks
+audit_events 13 columns 3 indexes 3 fks
+class_groups 13 columns 1 indexes 5 fks
+class_placements 14 columns 1 indexes 5 fks
+grades 11 columns 1 indexes 2 fks
+learner_admissions 13 columns 2 indexes 4 fks
+learner_enrolments 15 columns 1 indexes 7 fks
+learner_subject_enrolments 17 columns 2 indexes 5 fks
+learners 11 columns 2 indexes 4 fks
+media_assets 15 columns 3 indexes 4 fks
+media_folders 7 columns 2 indexes 2 fks
+membership_roles 13 columns 2 indexes 5 fks
+roles 11 columns 0 indexes 2 fks
+school_memberships 12 columns 2 indexes 4 fks
+school_subjects 12 columns 1 indexes 4 fks
+schools 11 columns 1 indexes 2 fks
+session 8 columns 0 indexes 1 fks
+staff_profiles 12 columns 1 indexes 4 fks
+subject_catalogue 11 columns 1 indexes 2 fks
+subject_grades 9 columns 1 indexes 4 fks
+subject_offerings 14 columns 1 indexes 6 fks
+teacher_assignments 13 columns 2 indexes 5 fks
+terms 13 columns 1 indexes 4 fks
+user 7 columns 0 indexes 0 fks
+verification 6 columns 0 indexes 0 fks
+
+No schema changes, nothing to migrate 😴

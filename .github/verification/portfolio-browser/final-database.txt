@@ -1,0 +1,49 @@
+node : (node:15684) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as
+aliases for 'verify-full'.
+At line:12 char:6
++ '@ | node --input-type=module 2>&1 | Tee-Object -FilePath .github/ver ...
++      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:15684) Wa... 'verify-full'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq
+semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "publicTables": 27,
+  "counts": {
+    "assets": 4,
+    "folders": 1,
+    "learners": 4,
+    "audit_events": 15
+  },
+  "syntheticAssets": [
+    {
+      "title": "Browser acceptance 96eb5551-18a3-42e2-9770-56ffcba1fabd portfolio",
+      "state": "ready",
+      "archived": false
+    },
+    {
+      "title": "Browser acceptance bc781ab7-ad93-460e-90e3-8f7729f68eec edited",
+      "state": "ready",
+      "archived": true
+    },
+    {
+      "title": "Browser acceptance bc781ab7-ad93-460e-90e3-8f7729f68eec media",
+      "state": "ready",
+      "archived": true
+    }
+  ],
+  "syntheticFolders": [
+    {
+      "name": "Browser acceptance bc781ab7-ad93-460e-90e3-8f7729f68eec",
+      "archived": true
+    }
+  ]
+}
