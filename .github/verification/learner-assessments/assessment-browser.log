@@ -1,0 +1,21 @@
+(node:20836) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Sam/Documents/Backup/codezone/school-cloud/lib/domain/assessments.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Sam\Documents\Backup\codezone\school-cloud\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:20836) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+{"identity":{"original":["7c614400-0587-4313-a3b2-0f6292196ad5","87169b1d-0c94-43c5-b342-fe7c310ec60d"],"reordered":["87169b1d-0c94-43c5-b342-fe7c310ec60d","7c614400-0587-4313-a3b2-0f6292196ad5"],"added":["87169b1d-0c94-43c5-b342-fe7c310ec60d","7c614400-0587-4313-a3b2-0f6292196ad5","aea3c490-0091-4973-91c3-84f2024ecfa4"],"removed":["7c614400-0587-4313-a3b2-0f6292196ad5","aea3c490-0091-4973-91c3-84f2024ecfa4"]}}
+PASS real concurrent transactions: one commit and one controlled conflict
+{
+  "result": "PASS",
+  "runId": "fb0592ef-37c4-472c-a1f3-7c4ca0abcfd5",
+  "draftId": "5c09a0e4-c9e8-4420-9a5e-4c3540cf18c5",
+  "retained": "one synthetic draft, two tasks, initialized types if absent, and audit history; no R2 operations",
+  "coverage": "real create/reload/edit/reorder actions, cross-term dates, stale conflict, concurrent transactions, teacher/moderator/anonymous/foreign-school pages, 390px form"
+}

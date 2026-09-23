@@ -1,0 +1,41 @@
+(node:12860) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/Sam/Documents/Backup/codezone/school-cloud/lib/domain/assessments.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Sam\Documents\Backup\codezone\school-cloud\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12860) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+PASS roster matches foundation; Not started is derived; reads create no records
+PASS Draft assessment rejects learner reads and writes
+PASS lazy partial save persists observations, feedback and exact score
+PASS stale partial write rejected
+PASS incomplete completion rejected without losing saved work
+PASS arbitrary browser totals and forged criterion/indicator rejected
+PASS observation updates preserve UUID and creator
+PASS absence cannot silently discard saved work
+PASS database rejects wrong indicator, duplicates and parent identity changes
+PASS evidence ownership and task/criterion boundaries enforced
+PASS existing evidence can be associated, scoped and removed
+PASS audit failure rolls back completion, feedback and evidence
+PASS complete derives authoritative total/performance, audit and next
+PASS completed result rejects all service mutations and stale saves
+PASS completed parent, observations, evidence and asset protected directly
+PASS absence has no score; explicit begin reuses identity and is audited
+PASS absence versus stale save yields controlled conflict
+PASS no-scale assessment completes without fabricated descriptor
+PASS anonymous, moderator and admin-only cannot enter results
+PASS mixed admin/teacher still requires actual assignment
+PASS revoked and expired teacher assignments deny reads/writes
+PASS dated transfer out excludes learner and prevents result access
+PASS foreign/non-roster claims denied
+PASS opened definition locking remains intact
+PASS real foreign school learner, assessment and evidence denied; tenant FKs enforced
+PASS assigned mixed-role teacher retains only actual teaching assignments
+PASS another assessment criterion and indicator cannot be submitted
+PASS absence audit failure rolls back the state transition
+Learner assessment integration PASS: 28 checks; all fixtures rolled back; no object-storage calls

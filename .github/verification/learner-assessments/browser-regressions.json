@@ -1,0 +1,42 @@
+[
+  {
+    "name": "teaching-browser",
+    "script": "teaching-browser-smoke.mjs",
+    "args": [],
+    "start": "2026-09-21T17:23:02.123Z",
+    "end": "2026-09-21T17:24:30.532Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "admin-browser",
+    "script": "admin-browser-smoke.mjs",
+    "args": [],
+    "start": "2026-09-21T17:24:30.534Z",
+    "end": "2026-09-21T17:25:30.136Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "assessment-browser",
+    "script": "assessment-browser-smoke.mjs",
+    "args": [
+      "--retain-test-evidence"
+    ],
+    "start": "2026-09-21T17:25:30.138Z",
+    "end": "2026-09-21T17:31:01.929Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "structured-browser",
+    "script": "structured-assessment-browser-smoke.mjs",
+    "args": [
+      "--retain-test-evidence"
+    ],
+    "start": "2026-09-21T17:31:01.931Z",
+    "end": "2026-09-21T17:31:07.072Z",
+    "exitCode": 1,
+    "result": "FAIL"
+  }
+]

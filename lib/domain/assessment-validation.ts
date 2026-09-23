@@ -1,4 +1,4 @@
-import { DomainError, learnerName, uuidInput } from './foundation.ts'
+import { DomainError, learnerName, uuidInput } from './validation.ts'
 import { dateInput } from './administration.ts'
 
 export const initialAssessmentTypes = [

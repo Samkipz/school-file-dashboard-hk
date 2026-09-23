@@ -1,5 +1,17 @@
 # SchoolHub Roadmap
 
+## Approved learner assessment boundary (2026-09-21)
+
+The owner authorized the learner workflow through observations, partial saves, feedback, existing-file evidence and calculated completion with Complete & Next. [Implementation and verification](LEARNER_ASSESSMENT_IMPLEMENTATION.md) are in progress. Completed records remain read-only. Controlled correction/amendment is a possible next design discussion, not authorized implementation. Close/Archive, reporting, analytics, simple assessments and KNEC integration remain outside this slice.
+
+## Approved boundary update (2026-09-20)
+
+Structured assessment authoring through Open is authorized and implemented, with verification recorded in [the slice record](STRUCTURED_ASSESSMENT_IMPLEMENTATION.md). Stop at Open. Learner observation/scoring, feedback/evidence and Save & Next require separate approval. Earlier design-only next-step statements are historical.
+
+## Current bounded slice (2026-09-20)
+
+Implemented and implementer-verified: CBE application shell, Teacher Home, My Teaching, offering-based Subject Workspace and authorized Learners roster. See [implementation/results](CBE_SHELL_IMPLEMENTATION.md), [product direction](CBE_FRONTEND_ALIGNMENT.md) and [current delivery status](PROJECT_LOG.md). Existing domain services, admin workflows and private files are retained. Teacher assessment lifecycle, scoring, evidence, progress, pathways and readiness remain deferred. This slice stops here; the next planned step is assessment journey design only. No broader roadmap phase is completed by this slice.
+
 September 16 bounded follow-up: repair the independent draft verification findings and establish stable task identity; see [hardening status](ASSESSMENT_DRAFT_HARDENING.md). Do not advance assessment features from this work. Before implementing any task-dependent model, review and approve the referenced-task deletion/correction lifecycle.
 
 ## Current assessment update (2026-09-14)

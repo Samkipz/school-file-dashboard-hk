@@ -18,14 +18,13 @@ export default async function CalendarPage() {
   const now = new Date()
   const initialEvents = await getEvents(now.getFullYear(), now.getMonth())
 
-  return (
+return (
     <AppLayout>
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground">Calendar</h1>
-          <p className="text-muted-foreground mt-2">View and manage your school events</p>
-        </div>
-
+      <div className="space-y-6 py-4 sm:py-6">
+        <header className="space-y-2">
+          <h1 className="text-4xl font-bold">Calendar</h1>
+          <p className="text-muted-foreground">View and manage your school events</p>
+        </header>
         <CalendarClient initialEvents={initialEvents} />
       </div>
     </AppLayout>

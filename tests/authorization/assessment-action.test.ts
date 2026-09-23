@@ -1,9 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { DomainError } from '../../lib/domain/foundation'
-const mocks = vi.hoisted(() => ({save:vi.fn(),saveType:vi.fn(),initializeTypes:vi.fn(),revalidatePath:vi.fn()}))
+const mocks = vi.hoisted(() => ({save:vi.fn(),open:vi.fn(),saveType:vi.fn(),initializeTypes:vi.fn(),revalidatePath:vi.fn()}))
 vi.mock('@/lib/domain/server',()=>({assessments:mocks}))
 vi.mock('next/cache',()=>({revalidatePath:mocks.revalidatePath}))
 import { planAssessment } from '../../app/actions/assessments'
+import { DefinitionError } from '../../lib/domain/scoring-guide'
 const form = (value: string) => {const f=new FormData();f.set('payload',value);return f}
 beforeEach(()=>vi.resetAllMocks())
 it('returns controlled malformed and oversized payload errors',async()=>{
@@ -33,4 +34,11 @@ it('carries task identities and order to the authorized service unchanged',async
   mocks.save.mockResolvedValueOnce({id:'draft'})
   await planAssessment('school','save',{ok:false,message:''},form(JSON.stringify(payload)))
   expect(mocks.save).toHaveBeenCalledWith('school',payload,'draft',7)
+})
+it('opens only through the domain service and returns actionable structure errors', async () => {
+  mocks.open.mockRejectedValueOnce(new DefinitionError(['Task 1: add at least one criterion.']))
+  const result = await planAssessment('school','open',{ok:false,message:''},form('{"id":"draft","expectedVersion":7}'))
+  expect(mocks.open).toHaveBeenCalledWith('school','draft',7)
+  expect(result).toEqual({ok:false,message:'Task 1: add at least one criterion.'})
+  expect(mocks.revalidatePath).not.toHaveBeenCalled()
 })

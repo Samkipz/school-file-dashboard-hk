@@ -50,6 +50,41 @@
       "when": 1789569962935,
       "tag": "0006_assessment_task_order",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789931742531,
+      "tag": "0007_structured_assessments",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789932229784,
+      "tag": "0008_structured_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789986129024,
+      "tag": "0009_learner_assessments",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789986217668,
+      "tag": "0010_learner_result_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789993653868,
+      "tag": "0011_evidence_retention",
+      "breakpoints": true
     }
   ]
 }

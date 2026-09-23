@@ -7,8 +7,8 @@ const geistSans = Geist({ subsets: ['latin'] })
 const geistMono = Geist_Mono({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SchoolHub - File Repository',
-  description: 'School file management and collaboration platform',
+  title: 'SchoolHub — Teaching & Learning',
+  description: 'School academic management for competency-based education',
   generator: 'v0.app',
   icons: {
     icon: [

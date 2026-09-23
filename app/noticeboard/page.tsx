@@ -18,29 +18,23 @@ export default async function NoticeboardPage() {
 
   return (
     <AppLayout>
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground">Noticeboard</h1>
-          <p className="text-muted-foreground mt-2">View announcements and upcoming events</p>
-        </div>
-
-        <Button className="gap-2 mb-6">
+      <div className="space-y-6 py-4 sm:py-6">
+        <header className="space-y-2">
+          <h1 className="text-4xl font-bold">Noticeboard</h1>
+          <p className="text-muted-foreground">View announcements and upcoming events</p>
+        </header>
+        <Button className="gap-2">
           <Plus className="w-4 h-4" />
           New Announcement
         </Button>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Announcements</h2>
-            <Card className="p-8 text-center bg-card border-border">
-              <p className="text-muted-foreground">No announcements yet</p>
-            </Card>
+            <h2 className="text-lg font-semibold mb-4">Announcements</h2>
+            <Card className="p-8 text-center border"><p className="text-muted-foreground">No announcements yet</p></Card>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Events</h2>
-            <Card className="p-8 text-center bg-card border-border">
-              <p className="text-muted-foreground">No events yet</p>
-            </Card>
+            <h2 className="text-lg font-semibold mb-4">Events</h2>
+            <Card className="p-8 text-center border"><p className="text-muted-foreground">No events yet</p></Card>
           </div>
         </div>
       </div>

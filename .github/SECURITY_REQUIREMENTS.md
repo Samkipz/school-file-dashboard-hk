@@ -1,5 +1,19 @@
 # SchoolHub Security Requirements
 
+## Learner result boundary (2026-09-21)
+
+Learner-result commands require a current teacher role and actual active offering assignment, including mixed-role staff. Setup administration alone grants no result-entry rights. Every result read/write and evidence download verifies assessment, offering and current learner eligibility. Client totals/descriptors are rejected; selected indicators and exact locked definitions determine scores. Aggregate revisions prevent stale overwrites, completion is transactional with audit, and PostgreSQL locks completed parents/children. Referenced evidence retains private storage and cannot be archived while linked. See [scope and executed verification](LEARNER_ASSESSMENT_IMPLEMENTATION.md).
+
+## Teacher assessment authoring (2026-09-20)
+
+Assigned teachers may save/open definitions only in currently authorized offerings. Every write rechecks server-session membership/roles and offering context; both existing and proposed offering IDs are checked. School Admin retains school-wide authority; type configuration remains admin-only. Composite school/parent FKs, child ID provenance checks, aggregate revisions, transactional audit and database-enforced open locking protect definitions. File access is unchanged. See [implementation](STRUCTURED_ASSESSMENT_IMPLEMENTATION.md); the earlier admin-only assessment rule describes the superseded draft slice.
+
+## CBE shell and teaching access (2026-09-20)
+
+Shell capabilities come from the session-bound foundation school context; hiding links never grants or revokes domain access. My Teaching explicitly requests current assigned offerings even when the caller also has School Admin. Workspace reads resolve the claimed offering in that assigned set, then independently invoke the existing server-authorized roster query. Counts use the same roster policy. The default administration foundation scope and all assessment/file permissions are unchanged.
+
+URLs preserve school and offering identity. Unknown/foreign school selections never fall back to an available school; multiple memberships require a choice. Denied/stale offering contexts reveal no roster. Private Files is a navigation hub for existing permissions, not a new teacher upload or personal storage capability. See [implementation and tests](CBE_SHELL_IMPLEMENTATION.md).
+
 ## Stable task identity (2026-09-16)
 
 Submitted task UUIDs are untrusted claims: syntax alone is insufficient. Resolve every claimed ID against the authorized school/draft, reject duplicates and foreign/unknown IDs, and preserve parent/creation identity. Structural task audit data excludes text and commits with all parent/child writes. Referenced-task deletion/correction policy requires approval before task dependents exist. See [hardening verification](ASSESSMENT_DRAFT_HARDENING.md).

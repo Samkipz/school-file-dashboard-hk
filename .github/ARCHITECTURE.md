@@ -1,5 +1,21 @@
 # SchoolHub Architecture
 
+## Learner assessments (2026-09-21)
+
+`learner-assessments.ts` composes the existing SERIALIZABLE school transaction, assigned-offering policy and extracted unchanged foundation roster query. `learner-result.ts` derives exact criterion/task/assessment scores from selected immutable indicators. Three tenant tables hold participation, observations and evidence associations; PostgreSQL guards lock completed academic records and protect referenced assets. The teacher workflow uses `/academics` and a separately authorized private assessment-evidence route. See [implementation and verification status](LEARNER_ASSESSMENT_IMPLEMENTATION.md). No result correction or historical teacher authority is introduced.
+
+## Structured assessment definitions (2026-09-20)
+
+The existing assessment aggregate now includes tenant-scoped criteria, indicators and performance levels, exact integer-hundredth scoring, generic origin and a draft ? open transition. Shared teacher/admin authoring uses the foundation offering policy inside the existing SERIALIZABLE school transaction. Child mutations advance aggregate revisions; open definitions are locked at service and PostgreSQL boundaries. See [decisions, migrations and verification](STRUCTURED_ASSESSMENT_IMPLEMENTATION.md). Earlier draft-only statements below are historical.
+
+## CBE frontend shell (2026-09-20)
+
+`components/app-layout.tsx` is now a server wrapper that resolves school capabilities; `app-shell.tsx` and `sidebar-nav.tsx` render the responsive shell. Request-local cached school context uses the session-bound foundation service. Navigation is presentation only: domain checks remain authoritative. A single membership may be selected automatically; multiple memberships require explicit selection, and invalid explicit context never falls back to another school.
+
+Home (`/`) and My Teaching (`/academics`) use current assigned offerings, including for mixed admin/teacher users. The existing `getFoundation` gains an explicit assigned scope without changing its default admin-access behavior. `getSchoolContext` returns effective capabilities and current years/terms using school-local dates. `/academics?school=…&offering=…&view=overview|learners` identifies workspaces by offering ID and reuses the authorized roster service. Counts reuse that same roster query; no assessment aggregates exist. Multiple/no current periods are reported explicitly.
+
+`/files` links to existing learner portfolio files and, for administrators, school media. It introduces no personal-storage ownership model or evidence associations. Existing admin pages retain their forms and actions. Only Overview and Learners are implemented subject destinations. See [implementation record](CBE_SHELL_IMPLEMENTATION.md); no schema/migration change is needed.
+
 ## Draft identity hardening (2026-09-16)
 
 Draft saves reconcile retained/new/removed tasks inside the existing parent revision and SERIALIZABLE transaction, preserving retained UUIDs and creation provenance. An additive custom migration defers ordinal uniqueness while retaining the final positive/unique/contiguous 1–100 ordering contract. Application and database nonblank checks share the ECMAScript whitespace set. Future task dependents require an approved deletion/correction lifecycle. See [implementation and checks](ASSESSMENT_DRAFT_HARDENING.md).

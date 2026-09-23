@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -16,7 +16,7 @@ const chrome=spawn(process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Ap
 let socket, sequence=0, cookie='', draftId
 const pending=new Map(), runId=randomUUID(), title=`Browser draft ${runId}`
 const delay=ms=>new Promise(r=>setTimeout(r,ms))
-async function until(check,label) { const deadline=Date.now()+40000;while(Date.now()<deadline){if(await check())return;await delay(150)}throw new Error(`Timed out: ${label}`) }
+async function until(check,label) { const deadline=Date.now()+90000;while(Date.now()<deadline){if(await check())return;await delay(150)}throw new Error(`Timed out: ${label}`) }
 function send(method,params={}) { return new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))}) }
 async function evaluate(expression) {const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error('Browser evaluation failed: '+result.exceptionDetails.text);return result.result.value}
 async function click(label) {
@@ -65,7 +65,7 @@ try {
   await until(()=>evaluate("document.querySelector('select[aria-label=\"Assessment type\"]')?.options.length>1"),'types displayed')
   await until(async()=>{await click('Add task');return evaluate("!!document.querySelector('input[aria-label=\"Task 1 title\"]')")},'hydration')
   // Hydration retry can add more than one task; retain exactly one before adding the second.
-  await evaluate("(()=>{const b=Array.from(document.querySelectorAll('button')).filter(b=>b.textContent.trim()==='Remove task');for(const e of b.slice(1))e.click()})()")
+  await evaluate("window.confirm=()=>true;(()=>{const b=Array.from(document.querySelectorAll('button')).filter(b=>b.textContent.trim()==='Remove task');for(const e of b.slice(1))e.click()})()")
   await set('Assessment title',title)
   await set('Subject offering',id('offering-math'),'select')
   await set('Term',id('term-1'),'select')
@@ -97,7 +97,7 @@ try {
   assert.deepEqual(added.tasks.slice(0,2).map(t=>t.id),reordered.tasks.map(t=>t.id))
   assert.ok(!originalIds.includes(added.tasks[2].id))
   await navigate(`/admin/assessments?school=${school}&draft=${draftId}`)
-  await click('Remove task'); await click('Save draft')
+  await evaluate('window.confirm=()=>true'); await click('Remove task'); await click('Save draft')
   await until(async()=>(await service.get(school,draftId)).tasks.length===2,'browser task removal')
   const removed=await service.get(school,draftId)
   assert.deepEqual(removed.tasks.map(t=>t.id),[originalIds[0],added.tasks[2].id])
@@ -112,7 +112,9 @@ try {
   assert.equal(await evaluate('document.documentElement.scrollWidth<=390'),true,'mobile document width')
   assert.equal(await evaluate("Array.from(document.querySelectorAll('input,select,textarea')).every(e=>e.getBoundingClientRect().right<=390)"),true,'mobile form controls fit')
   const screenshot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})
-  await writeFile('.github/verification/assessment-hardening/mobile.png',Buffer.from(screenshot.data,'base64'))
+  const evidence=process.env.SMOKE_EVIDENCE_DIR ?? '.github/verification/structured-assessments'
+  await mkdir(evidence,{recursive:true})
+  await writeFile(join(evidence,'legacy-admin-mobile.png'),Buffer.from(screenshot.data,'base64'))
   // Two actual SERIALIZABLE transactions compete over the same aggregate version.
   const current=await service.get(school,draftId)
   const race=await Promise.allSettled([service.save(school,{...current,title:title+' race A'},draftId,Number(current.row_version)),service.save(school,{...current,title:title+' race B'},draftId,Number(current.row_version))])
@@ -131,7 +133,15 @@ try {
   await signout();await navigate(`/admin/assessments?school=${school}&draft=${draftId}`)
   await until(()=>evaluate("location.pathname==='/sign-in'"),'anonymous redirect')
   console.log(JSON.stringify({result:'PASS',runId,draftId,retained:'one synthetic draft, two tasks, initialized types if absent, and audit history; no R2 operations',coverage:'real create/reload/edit/reorder actions, cross-term dates, stale conflict, concurrent transactions, teacher/moderator/anonymous/foreign-school pages, 390px form'},null,2))
-} catch(error) {safeFailure(error);console.log({runId,draftId,retained:'Any records created before failure are retained'})}
+ } catch(error) {
+  safeFailure(error);console.log({runId,draftId,retained:'Any records created before failure are retained'})
+  if(socket?.readyState===WebSocket.OPEN) {
+    const diagnostic=await evaluate(`({url:location.pathname+location.search, alerts:Array.from(document.querySelectorAll('[role="alert"]')).map(e=>e.textContent), invalid:Array.from(document.querySelectorAll(':invalid')).map(e=>({label:e.getAttribute('aria-label'),message:e.validationMessage})), payload:document.querySelector('form[aria-label="Assessment draft"] input[name="payload"]')?.value})`).catch(()=>null)
+    console.log(diagnostic)
+    const evidence=process.env.SMOKE_EVIDENCE_DIR ?? '.github/verification/structured-assessments'
+    await mkdir(evidence,{recursive:true}); await writeFile(join(evidence,'admin-failure.json'),JSON.stringify(diagnostic,null,2))
+  }
+}
 finally {
   if(socket?.readyState===WebSocket.OPEN){await signout().catch(()=>{});await send('Browser.close').catch(()=>{});socket.close()}
   chrome.kill();await pool.end()

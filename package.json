@@ -16,6 +16,7 @@
     "db:seed": "node scripts/db-seed.mjs",
     "db:verify": "node scripts/db-verify.mjs",
     "test:integration": "node scripts/db-integration.mjs",
+    "test:teaching:browser": "node scripts/teaching-browser-smoke.mjs",
     "test:admin": "node scripts/admin-integration.mjs",
     "test:admin:smoke": "node scripts/admin-smoke.mjs",
     "test:admin:browser": "node scripts/admin-browser-smoke.mjs",
@@ -25,7 +26,11 @@
     "test:files": "node scripts/files-integration.mjs",
     "test:files:browser": "node scripts/files-browser-smoke.mjs",
     "test:assessments": "node scripts/assessment-integration.mjs",
-    "test:assessments:browser": "node scripts/assessment-browser-smoke.mjs"
+    "test:assessments:browser": "node scripts/assessment-browser-smoke.mjs",
+    "test:assessments:structured": "node scripts/structured-assessment-integration.mjs",
+    "test:assessments:structured:browser": "node scripts/structured-assessment-browser-smoke.mjs",
+    "test:assessments:learners": "node scripts/learner-assessment-integration.mjs",
+    "test:assessments:learners:browser": "node scripts/learner-assessment-browser-smoke.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1089.0",
@@ -62,4 +67,3 @@
     "vitest": "4.1.11"
   }
 }
-

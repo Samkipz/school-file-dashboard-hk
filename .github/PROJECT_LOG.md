@@ -1,5 +1,27 @@
 # SchoolHub project log
 
+## Guided teacher assessment preparation (2026-09-22)
+
+The teacher assessment list and four-step preparation journey are implemented, preserving the administrator editor and existing domain/authorization/revision rules. Verification and actual interrupted attempts are recorded in [GUIDED_ASSESSMENT_IMPLEMENTATION.md](GUIDED_ASSESSMENT_IMPLEMENTATION.md). No commit, push or deployment is included.
+
+## Learner assessment slice (2026-09-21, verification in progress)
+
+The owner authorized Open assessment → roster → learner observations → feedback/evidence → calculated completion → Complete & Next. Implementation and final verification are tracked in [LEARNER_ASSESSMENT_IMPLEMENTATION.md](LEARNER_ASSESSMENT_IMPLEMENTATION.md). Current work preserves the verified structured model, original migration bytes, learner/media rows and existing file permissions. Result entry requires current teaching assignments; completed records are read-only. This supersedes the earlier statement that learner scoring is unauthorized, without authorizing correction, Close/Archive or reporting. No commit, push or deployment is included.
+
+## Structured assessment slice (2026-09-20)
+
+The owner subsequently authorized implementation through **Open assessment**. This supersedes the earlier design-only next-action boundary below. The existing assessment foundation now supports assigned-teacher authoring, criteria/indicators, exact scoring guides, configured performance ranges and immutable opened definitions. Final implementer verification completed on September 21: 130 default tests, 19 structured / 158 legacy assessment / 59 foundation / 57 administration / 23 file / 41 lifecycle checks, concurrency, four browser journeys, typecheck, lint and production build pass. The development schema has 33 tables, 397 columns, 115 FKs and nine matching migration hashes. See [final results, interrupted-attempt history and limits](STRUCTURED_ASSESSMENT_IMPLEMENTATION.md). Learner scoring, feedback/evidence, Close/Archive and reporting remain unauthorized and unimplemented. No commit, push or deployment is included.
+
+## Current implementation direction (2026-09-20)
+
+The owner-approved bounded **CBE shell → Teacher Home → My Teaching → Subject Workspace → Learners** slice is implemented and implementer-verified. See [implementation, file inventory, verification and limits](CBE_SHELL_IMPLEMENTATION.md). Independent review and human acceptance are not claimed. [CBE_FRONTEND_ALIGNMENT.md](CBE_FRONTEND_ALIGNMENT.md) is the baseline product-direction review; this log remains the delivery source of truth. Existing academic administration, learner lifecycle, assignment/roster authorization and private storage are reused. Generic files, calendar and community modules are secondary, not the primary product experience.
+
+Current frontend: role-aware Home/navigation, My Teaching with real current assignments and roster counts, offering-based Overview/Learners, preserved school context, mobile keyboard navigation and a Private Files hub. Admin setup/forms and file permissions remain intact. Typecheck, production build, lint (9 existing warnings), 111 default tests, 59 foundation, 57 administration and 23 private-file integration checks pass. Teacher and admin production-browser journeys pass, including refresh, mobile focus and draft setup reachability. No migrations or R2 changes.
+
+Assessment planning remains admin-only and draft-only. Pathways/tracks/combinations, teacher assessment lifecycle, scoring, feedback, evidence linking, learner self-service/progress and readiness remain unimplemented. This slice stops here. Next planned work is the teacher assessment journey design exercise, not implementation. No commit, push or deployment was performed.
+
+The September 17 checkpoint below supersedes older pending-hardening verification statements. Older delivery tables and next-action lists are dated history; they do not override this approved slice. No historical checkpoint is rewritten.
+
 ## Development checkpoint authorization (2026-09-17)
 
 The owner reports that independent verification of the assessment hardening returned **PASS WITH CONCERNS**, with no blocking assessment defect, and authorizes a development checkpoint commit of the reviewed portfolio/media and assessment draft state. This supersedes the pending-verification/commit status in the dated September 16 entry below. See [checkpoint scope and verification](DEVELOPMENT_CHECKPOINT.md). This authorization does not approve production deployment or further assessment features.

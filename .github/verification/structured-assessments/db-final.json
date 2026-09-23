@@ -1,0 +1,135 @@
+{
+  "checkedAt": "2026-09-21T04:52:40.550Z",
+  "publicTables": [
+    "academic_years",
+    "account",
+    "assessment_criteria",
+    "assessment_indicators",
+    "assessment_levels",
+    "assessment_tasks",
+    "assessment_types",
+    "assessments",
+    "audit_actors",
+    "audit_events",
+    "class_groups",
+    "class_placements",
+    "grades",
+    "learner_admissions",
+    "learner_enrolments",
+    "learner_subject_enrolments",
+    "learners",
+    "media_assets",
+    "media_folders",
+    "membership_roles",
+    "roles",
+    "school_memberships",
+    "school_subjects",
+    "schools",
+    "session",
+    "staff_profiles",
+    "subject_catalogue",
+    "subject_grades",
+    "subject_offerings",
+    "teacher_assignments",
+    "terms",
+    "user",
+    "verification"
+  ],
+  "migrations": [
+    {
+      "tag": "0000_foundation",
+      "hash": "73a515ca20f3799803c9a43f55fa344650b8e97c508a0ec80b3881952ea086f1",
+      "appliedExactlyOnce": true
+    },
+    {
+      "tag": "0001_foundation_guards",
+      "hash": "746d27b844f67c719a0ac66c9b839f453d6eaa0efbf765f8695b7511d77dbf40",
+      "appliedExactlyOnce": true
+    },
+    {
+      "tag": "0002_portfolio_media",
+      "hash": "11f297244215247102984891e2c94503df9bc01e01fbc8960d982fded87ebcf7",
+      "appliedExactlyOnce": true
+    },
+    {
+      "tag": "0003_assessment_drafts",
+      "hash": "f76fa50915b180c9902e41f4bdc4ac2d6ff83e0258ead448463442e0d07f63d5",
+      "appliedExactlyOnce": true
+    },
+    {
+      "tag": "0004_assessment_draft_guards",
+      "hash": "94200b78e4115a78c6190f5f5d3e40fa2104e661633f533582ad1abf11d5b6d7",
+      "appliedExactlyOnce": true
+    },
+    {
+      "tag": "0005_assessment_nonblank",
+      "hash": "936ef1479d9846338fadca9941b5ef5c1e7e714935df7d8fd14b9ae43bd51884",
+      "appliedExactlyOnce": true
+    },
+    {
+      "tag": "0006_assessment_task_order",
+      "hash": "58ae41ee0fd221ece6617b543c61af75289a06594d351f5b67903001b8c4c0c8",
+      "appliedExactlyOnce": true
+    },
+    {
+      "tag": "0007_structured_assessments",
+      "hash": "b1889091c9e320ea909ed4f80fff9bc41f341972030afd082a3d5d661bea8102",
+      "appliedExactlyOnce": true
+    },
+    {
+      "tag": "0008_structured_guards",
+      "hash": "17a5faf58ce62b75ec7e16f10d9eadd61a27e292cfa8890a9fd64d8f0481637b",
+      "appliedExactlyOnce": true
+    }
+  ],
+  "counts": {
+    "assessments": 6,
+    "assessment_tasks": 10,
+    "assessment_criteria": 1,
+    "assessment_indicators": 2,
+    "assessment_levels": 1,
+    "media_assets": 4,
+    "media_folders": 2,
+    "learners": 5,
+    "audit_events": 49
+  },
+  "fingerprints": {
+    "media_assets": "8c3fa45769a5b6a7fd479092deeed675",
+    "media_folders": "e2738d1af542f9fd42e002d6e09f30cf",
+    "learners": "5ca3d429e38f01275d6ac7a289d99bdc"
+  },
+  "storageAndLearnerMetadataUnchanged": true,
+  "constraints": [
+    {
+      "contype": "c",
+      "count": 99
+    },
+    {
+      "contype": "f",
+      "count": 115
+    },
+    {
+      "contype": "p",
+      "count": 33
+    },
+    {
+      "contype": "t",
+      "count": 26
+    },
+    {
+      "contype": "u",
+      "count": 62
+    }
+  ],
+  "unvalidatedConstraints": 0,
+  "assessmentStates": [
+    {
+      "status": "draft",
+      "count": 5
+    },
+    {
+      "status": "open",
+      "count": 1
+    }
+  ]
+}

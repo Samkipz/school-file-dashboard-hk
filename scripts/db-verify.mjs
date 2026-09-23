@@ -1,12 +1,12 @@
 ﻿import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { developmentPool, foundationTables, authTables, mediaTables, assessmentTables, safeFailure } from './db-common.mjs'
+import { developmentPool, foundationTables, authTables, mediaTables, assessmentTables, learnerAssessmentTables, safeFailure } from './db-common.mjs'
 const pool = developmentPool()
 try {
   const actual = (await pool.query("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename")).rows.map(r => r.tablename)
-  assert.deepEqual(actual, [...foundationTables,...authTables,...mediaTables,...assessmentTables].sort())
-  const snapshot = JSON.parse(readFileSync('drizzle/meta/0006_snapshot.json','utf8'))
+  assert.deepEqual(actual, [...foundationTables,...authTables,...mediaTables,...assessmentTables,...learnerAssessmentTables].sort())
+  const snapshot = JSON.parse(readFileSync('drizzle/meta/0011_snapshot.json','utf8'))
   let columns = 0, foreignKeys = 0
   for (const table of Object.values(snapshot.tables)) {
     const rows = (await pool.query(`SELECT column_name, is_nullable, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`, [table.name])).rows
@@ -43,12 +43,32 @@ try {
     ['assessment_tasks','assessment_task_mutable',false],['assessment_tasks','assessment_task_revision',false],
     ['assessments','assessment_dates_guard',true],['assessment_tasks','assessment_task_dates_guard',true],
     ['academic_years','assessment_year_dates_guard',true],
+    ['assessments','assessment_definition_locked',false],
+    ['assessments','assessment_structure_guard',true],
+    ['assessment_criteria','assessment_child_mutable',false],
+    ['assessment_criteria','assessment_criterion_revision',false],
+    ['assessment_criteria','assessment_criterion_structure_guard',true],
+    ['assessment_indicators','assessment_child_mutable',false],
+    ['assessment_indicators','assessment_indicator_revision',false],
+    ['assessment_indicators','assessment_indicator_structure_guard',true],
+    ['assessment_levels','assessment_child_mutable',false],
+    ['assessment_levels','assessment_level_revision',false],
+    ['assessment_levels','assessment_level_structure_guard',true],
   ]) {
     const trigger=assessmentTriggers.find(t=>t.table_name===table && t.tgname===name)
     assert.ok(trigger,`${table}.${name}`)
     assert.equal(trigger.tgenabled,'O',`${name} enabled`)
     assert.equal(trigger.tgdeferrable,deferred)
     assert.equal(trigger.tginitdeferred,deferred)
+  }
+  for (const [table,names] of [
+    ['learner_assessments',['learner_result_locked','learner_result_mutable','learner_result_no_truncate']],
+    ['criterion_observations',['learner_observation_guard','learner_observation_mutable','learner_observation_no_truncate']],
+    ['assessment_evidence',['learner_evidence_guard','learner_evidence_mutable','learner_evidence_no_truncate']],
+    ['media_assets',['learner_evidence_asset_locked']],
+  ]) {
+    const triggers=(await pool.query('SELECT tgname,tgenabled FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal',[table])).rows
+    for(const name of names) assert.ok(triggers.some(t=>t.tgname===name&&t.tgenabled==='O'),`${table}.${name} enabled`)
   }
   const journal = JSON.parse(readFileSync('drizzle/meta/_journal.json','utf8'))
   const history = (await pool.query('SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at')).rows

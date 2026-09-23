@@ -14,7 +14,7 @@ let sequence = 0
 const delay = ms => new Promise(r => setTimeout(r, ms))
 async function until(check, label) { const deadline = Date.now() + 20000; while (Date.now() < deadline) { if (await check()) return; await delay(100) } throw new Error(`Timed out: ${label}`) }
 function send(method, params = {}) { return new Promise((resolve, reject) => { const id = ++sequence; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })) }) }
-async function evaluate(expression) { const response = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (response.exceptionDetails) throw new Error('Browser evaluation failed'); return response.result.value }
+async function evaluate(expression) { const response = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (response.exceptionDetails) throw new Error(response.exceptionDetails.exception?.description ?? response.exceptionDetails.text); return response.result.value }
 const click = label => evaluate(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(label)}).click()`)
 try {
   let port
@@ -68,7 +68,16 @@ try {
   assert.equal(await evaluate("document.body.innerText.includes('Confirm and execute rollover')"), false)
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
   assert.equal(await evaluate('document.documentElement.scrollWidth <= 390'), true, 'mobile layout should not overflow horizontally')
-  console.log('Administration browser smoke PASS: all six tabs, lifecycle controls/history, explicit rollover selection, destination picker, invalid preview rejected without confirmation, real Server Action validation, mobile width')
+  console.log('PASS administration forms, lifecycle, validation and mobile layout')
+  await send('Page.navigate', { url: `${base}/` })
+  await until(() => evaluate("document.readyState==='complete' && document.querySelector('h1')?.textContent==='School overview' && Array.from(document.querySelectorAll('main a')).some(a=>a.textContent.includes('Assessment Setup'))"), 'admin Home')
+  assert.deepEqual(await evaluate("Array.from(document.querySelectorAll('nav[aria-label=\"Main navigation\"] a')).map(a=>a.textContent.trim())"), ['Overview', 'School Administration', 'Assessment Setup', 'Private Files'])
+  const assessmentLink = await evaluate("Array.from(document.querySelectorAll('main a')).find(a=>a.textContent.includes('Assessment Setup')).href")
+  assert.ok(new URL(assessmentLink).searchParams.get('school'), 'admin school context preserved')
+  await send('Page.navigate', { url: assessmentLink })
+  await until(() => evaluate("document.body.innerText.includes('Create draft') && document.body.innerText.includes('Configure assessment types')"), 'admin assessment planning remains reachable')
+  assert.equal(await evaluate("document.body.innerText.includes('Status: Draft')"), true)
+  console.log('Administration browser smoke PASS: all six tabs, lifecycle controls/history, explicit rollover selection, destination picker, invalid preview rejected without confirmation, real Server Action validation, mobile width, admin Home/navigation and draft assessment setup')
 } catch (error) { console.error({ error: error.name, message: error.message }); process.exitCode = 1 }
 finally {
   if (cookie) await fetch(`${base}/api/auth/sign-out`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base, Cookie: cookie }, body: '{}' }).catch(() => {})

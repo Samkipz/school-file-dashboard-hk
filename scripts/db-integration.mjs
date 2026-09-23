@@ -78,6 +78,22 @@ try {
   await rejectSql('same-school wrong offering class context','UPDATE learner_subject_enrolments SET offering_id=$1 WHERE id=$2',[id('offering-other'),id('subject-enrolment-1-math')],'23503')
   await test('teacher sees only its school',async()=>assert.deepEqual((await service.listSchools()).map(s=>s.id),[school]))
   await test('teacher sees 3 assigned offerings',async()=>assert.equal((await service.getFoundation(school)).offerings.length,3))
+  await test('My Teaching contains only current assigned offerings with academic identity',async()=>{
+    const offerings = (await service.getFoundation(school,'assigned')).offerings
+    assert.equal(offerings.length,3)
+    assert.ok(offerings.every(o=>o.academic_year_id===id('year') && o.grade==='Grade 10' && o.class_name==='Grade 10 East'))
+    assert.ok(!offerings.some(o=>[id('offering-other'),id('offering-school-2')].includes(o.id)))
+  })
+  await test('teacher shell capabilities and current periods are real school data',async()=>{
+    const context = await service.getSchoolContext(school)
+    assert.equal(context.canTeach,true); assert.equal(context.canManage,false)
+    assert.deepEqual(context.years.map(y=>y.id),[id('year')])
+    const expected = (await client.query("SELECT id FROM terms WHERE school_id=$1 AND (now() AT TIME ZONE 'Africa/Nairobi')::date BETWEEN starts_on AND ends_on AND archived_at IS NULL",[school])).rows
+    assert.deepEqual(context.terms.map(t=>t.id),expected.map(t=>t.id))
+  })
+  await test('forged school context denied',()=>assert.rejects(service.getSchoolContext(school2),/FORBIDDEN/))
+  await test('malformed school context denied',()=>assert.rejects(service.getSchoolContext('invalid'),/INVALID_INPUT/))
+  await test('malformed roster offering denied',()=>assert.throws(()=>service.getOfferingRoster(school,'invalid'),/INVALID_INPUT/))
   await test('assigned teacher sees 4 enrolled learners',async()=>assert.equal((await service.getOfferingRoster(school,id('offering-math'))).length,4))
   await test('cross-school read denied',()=>assert.rejects(service.getFoundation(school2),/FORBIDDEN/))
   await test('unknown offering denied',()=>assert.rejects(service.getOfferingRoster(school,id('foreign-offering')),/NOT_FOUND/))
@@ -99,6 +115,17 @@ try {
   const unassignedTeacher = await clone('membership_roles','grant-teacher',{id:id('grant-unassigned'),membership_id:id('membership-moderator')})
   await test('second teacher cannot use another staff assignment',()=>withChange(unassignedTeacher.sql,unassignedTeacher.values,()=>assert.rejects(service.getOfferingRoster(school,id('offering-math')),/NOT_FOUND/)))
   userId = id('user-admin')
+  await test('admin shell retains management capability',async()=>{
+    const context = await service.getSchoolContext(school)
+    assert.equal(context.canManage,true); assert.equal(context.canTeach,false)
+  })
+  await test('admin without teacher role has no My Teaching assignments',async()=>assert.equal((await service.getFoundation(school,'assigned')).offerings.length,0))
+  const mixedRole = await clone('membership_roles','grant-teacher',{id:id('grant-admin-teacher'),membership_id:id('membership-admin')})
+  await test('mixed admin teacher does not inherit all school offerings as assignments',()=>withChange(mixedRole.sql,mixedRole.values,async()=>{
+    assert.equal((await service.getSchoolContext(school)).canTeach,true)
+    assert.equal((await service.getFoundation(school,'assigned')).offerings.length,0)
+    assert.ok((await service.getFoundation(school)).offerings.length>0)
+  }))
   await test('admin can view school context',async()=>assert.equal((await service.getFoundation(school)).canManage,true))
   await test('admin rename increments version and writes audit atomically',async()=> {
     const row = await service.renameLearner(school,id('learner-1'),'Renamed in rollback test',1)

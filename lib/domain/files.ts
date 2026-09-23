@@ -31,9 +31,11 @@ const teacherScope = `EXISTS (SELECT 1 FROM learner_subject_enrolments se
  AND (now() AT TIME ZONE $3)::date BETWEEN p.starts_on AND coalesce(p.ends_on,y.ends_on)
  AND (now() AT TIME ZONE $3)::date BETWEEN e.starts_on AND coalesce(e.ends_on,y.ends_on)
  AND (now() AT TIME ZONE $3)::date BETWEEN a.admitted_on AND coalesce(a.left_on,y.ends_on))`
-export function fileService(pool: Pool, identify: () => Promise<string | null>, storage: PrivateStorage) {
+export function fileService(pool: Pool, identify: () => Promise<string | null>, storage: PrivateStorage, uploadPolicy?: (client: PoolClient, context: Context) => Promise<void>) {
   const foundation = foundationService(pool, identify)
   const admin = (context: Context) => { if (!context.roles.includes('school_admin')) throw new DomainError('FORBIDDEN') }
+  // Trusted domain composition only. Default uploads remain admin-only.
+  const authorizeUpload = async (client: PoolClient, context: Context) => { if (uploadPolicy) await uploadPolicy(client, context); else admin(context) }
   async function learners(client: PoolClient, context: Context, learnerId?: string) {
     if (!context.roles.includes('school_admin') && !context.roles.includes('teacher')) throw new DomainError('FORBIDDEN')
     return (await client.query<PortfolioLearner>(`SELECT l.id,l.display_name,l.status,
@@ -84,29 +86,29 @@ export function fileService(pool: Pool, identify: () => Promise<string | null>, 
     }),
     async upload(school: string, value: FileTarget, form: FormData) {
       // Authorize before reading bytes, reserve metadata before touching object storage.
-      await foundation.inSchool(school, async (c,x) => { admin(x); await target(c,x,value) })
+      await foundation.inSchool(school, async (c,x) => { await authorizeUpload(c,x); await target(c,x,value) })
       const data = await validateUpload(form, 'folderId' in value)
       const id = randomUUID(), key = `schools/${school}/assets/${id}.${data.ext}`
       const actor = await foundation.inSchool(school, async (c,x) => {
-        admin(x); const t = await target(c,x,value)
+        await authorizeUpload(c,x); const t = await target(c,x,value)
         await c.query(`INSERT INTO media_assets(id,school_id,learner_id,folder_id,object_key,original_name,title,description,category,mime_type,size,uploaded_by_actor_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [id,school,t.learner,t.folder,key,data.originalName,data.title,data.description,data.category,data.mimeType,data.size,x.actor_id])
         await audit(c,x,'media.upload_reserved',id); return x.actor_id
       })
       try { await storage.upload(key,data.bytes,data.mimeType) }
       catch {
         // Failed/pending rows retain the generated key for reconciliation; never delete existing objects.
-        try { await foundation.inSchool(school, async (c,x) => { admin(x); await c.query("UPDATE media_assets SET state='failed' WHERE school_id=$1 AND id=$2 AND state='pending'",[school,id]); await audit(c,x,'media.upload_failed',id) }) }
+        try { await foundation.inSchool(school, async (c,x) => { await authorizeUpload(c,x); await c.query("UPDATE media_assets SET state='failed' WHERE school_id=$1 AND id=$2 AND state='pending'",[school,id]); await audit(c,x,'media.upload_failed',id) }) }
         catch { console.error('Media upload requires reconciliation', { assetId: id }) }
         throw new Error('Upload failed. Please try again.')
       }
       try {
         await foundation.inSchool(school, async (c,x) => {
-          admin(x); await target(c,x,value)
+          await authorizeUpload(c,x); await target(c,x,value)
           const result = await c.query("UPDATE media_assets SET state='ready' WHERE school_id=$1 AND id=$2 AND state='pending' AND uploaded_by_actor_id=$3",[school,id,actor])
           if (!result.rowCount) throw new DomainError('CONFLICT'); await audit(c,x,'media.upload_completed',id)
         })
       } catch { console.error('Media upload requires reconciliation', { assetId: id }); throw new Error('Upload could not be finalized. Contact your administrator.') }
-      return { id }
+      return { id, title: data.title }
     },
     update: (school: string, id: string, title: string, description: string, category: string) => foundation.inSchool(school, async (c,x) => {
       admin(x); await asset(c,x,id); const fields = metadata(title,description,category)

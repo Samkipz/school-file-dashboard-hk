@@ -260,16 +260,69 @@ export const assessmentTypes = pgTable('assessment_types', {
     check('assessment_type_code', sql `${t.code} ~ '^[A-Z][A-Z0-9_]{0,63}$'`), check('assessment_type_name', sql `length(btrim(${t.name}, ${planningWhitespace})) > 0`), check('assessment_type_version', sql `${t.rowVersion} > 0`)]);
 export const assessments = pgTable('assessments', {
     ...tenant(), offeringId: uuid('offering_id').notNull(), academicYearId: uuid('academic_year_id').notNull(), termId: uuid('term_id'), assessmentTypeId: uuid('assessment_type_id').notNull(),
-    ...planningFields(), status: status(['draft'], 'draft'),
+    ...planningFields(), status: status(['draft', 'open'], 'draft'),
+    mode: varchar('mode', { length: 16 }).notNull().default('structured'),
+    origin: varchar('origin', { length: 16 }).notNull().default('internal'),
+    authority: varchar('authority', { length: 160 }), externalReference: varchar('external_reference', { length: 160 }),
+    openedAt: instant('opened_at'), openedByActorId: uuid('opened_by_actor_id').references(() => auditActors.id, { onDelete: 'restrict' }),
 }, t => [tenantKey(t), tenantFk(t, t.assessmentTypeId, assessmentTypes),
     foreignKey({ name: 'assessment_offering_year_fk', columns: [t.schoolId, t.offeringId, t.academicYearId], foreignColumns: [subjectOfferings.schoolId, subjectOfferings.id, subjectOfferings.academicYearId] }).onDelete('restrict'),
     foreignKey({ name: 'assessment_term_year_fk', columns: [t.schoolId, t.termId, t.academicYearId], foreignColumns: [terms.schoolId, terms.id, terms.academicYearId] }).onDelete('restrict'),
     index('assessment_offering_idx').on(t.schoolId, t.offeringId, t.academicYearId), index('assessment_term_idx').on(t.schoolId, t.termId, t.academicYearId),
     index('assessment_type_idx').on(t.schoolId, t.assessmentTypeId), index('assessment_year_idx').on(t.schoolId, t.academicYearId),
     index('assessment_creator_idx').on(t.createdByActorId), index('assessment_updater_idx').on(t.updatedByActorId),
-    check('assessment_draft_status', sql `${t.status} = 'draft'`), ...planningChecks('assessment', t)]);
+    index('assessment_opener_idx').on(t.openedByActorId),
+    check('assessment_draft_status', sql `${t.status} in ('draft','open')`),
+    check('assessment_mode', sql `${t.mode} = 'structured'`),
+    check('assessment_origin', sql `(${t.origin} = 'internal' and ${t.authority} is null and ${t.externalReference} is null) or (${t.origin} = 'external' and ${t.authority} is not null and length(btrim(${t.authority}, ${planningWhitespace})) > 0)`),
+    check('assessment_open_metadata', sql `(${t.status} = 'draft' and ${t.openedAt} is null and ${t.openedByActorId} is null) or (${t.status} = 'open' and ${t.openedAt} is not null and ${t.openedByActorId} is not null)`),
+    ...planningChecks('assessment', t)]);
 export const assessmentTasks = pgTable('assessment_tasks', {
     ...tenant(), assessmentId: uuid('assessment_id').notNull(), ordinal: integer('ordinal').notNull(), ...planningFields(),
 }, t => [tenantKey(t), tenantFk(t, t.assessmentId, assessments), unique().on(t.schoolId, t.assessmentId, t.ordinal),
     index('assessment_task_creator_idx').on(t.createdByActorId), index('assessment_task_updater_idx').on(t.updatedByActorId),
     check('assessment_task_ordinal', sql `${t.ordinal} between 1 and 100`), ...planningChecks('assessment_task', t)]);
+
+export const assessmentCriteria = pgTable('assessment_criteria', {
+    ...tenant(), taskId: uuid('task_id').notNull(), ordinal: integer('ordinal').notNull(), title: label('title'), description: varchar('description', { length: 4000 }),
+}, t => [tenantKey(t), tenantFk(t, t.taskId, assessmentTasks), unique().on(t.schoolId, t.taskId, t.ordinal),
+    index('criterion_creator_idx').on(t.createdByActorId), index('criterion_updater_idx').on(t.updatedByActorId),
+    check('criterion_title', sql `length(btrim(${t.title}, ${planningWhitespace})) > 0`), check('criterion_order', sql `${t.ordinal} between 1 and 100`)]);
+export const assessmentIndicators = pgTable('assessment_indicators', {
+    ...tenant(), criterionId: uuid('criterion_id').notNull(), ordinal: integer('ordinal').notNull(), descriptor: varchar('descriptor', { length: 1000 }).notNull(), scoreUnits: integer('score_units').notNull(),
+}, t => [tenantKey(t), tenantFk(t, t.criterionId, assessmentCriteria), unique().on(t.schoolId, t.criterionId, t.ordinal), unique().on(t.schoolId, t.criterionId, t.scoreUnits),
+    index('indicator_creator_idx').on(t.createdByActorId), index('indicator_updater_idx').on(t.updatedByActorId),
+    check('indicator_descriptor', sql `length(btrim(${t.descriptor}, ${planningWhitespace})) > 0`), check('indicator_order', sql `${t.ordinal} between 1 and 100`), check('indicator_score', sql `${t.scoreUnits} between 0 and 99999999`)]);
+export const assessmentLevels = pgTable('assessment_levels', {
+    ...tenant(), assessmentId: uuid('assessment_id').notNull(), ordinal: integer('ordinal').notNull(), code: varchar('code', { length: 32 }), descriptor: label('descriptor'), lowerUnits: integer('lower_units').notNull(), upperUnits: integer('upper_units').notNull(),
+}, t => [tenantKey(t), tenantFk(t, t.assessmentId, assessments), unique().on(t.schoolId, t.assessmentId, t.ordinal),
+    index('level_creator_idx').on(t.createdByActorId), index('level_updater_idx').on(t.updatedByActorId),
+    check('level_descriptor', sql `length(btrim(${t.descriptor}, ${planningWhitespace})) > 0`), check('level_order', sql `${t.ordinal} between 1 and 100`), check('level_range', sql `${t.lowerUnits} >= 0 and ${t.upperUnits} >= ${t.lowerUnits} and ${t.upperUnits} <= 99999999`)]);
+
+// Academic result identity is permanent; no archive/correction lifecycle yet.
+export const learnerAssessments = pgTable('learner_assessments', {
+    ...tenant(), assessmentId: uuid('assessment_id').notNull(), learnerId: uuid('learner_id').notNull(),
+    status: status(['in_progress', 'completed', 'absent'], 'in_progress'), feedback: varchar('feedback', { length: 4000 }),
+    completedAt: instant('completed_at'), completedByActorId: uuid('completed_by_actor_id').references(() => auditActors.id, { onDelete: 'restrict' }),
+    absentAt: instant('absent_at'), absentByActorId: uuid('absent_by_actor_id').references(() => auditActors.id, { onDelete: 'restrict' }),
+}, t => [tenantKey(t), tenantFk(t, t.assessmentId, assessments), tenantFk(t, t.learnerId, learners),
+    unique('learner_assessment_once').on(t.schoolId, t.assessmentId, t.learnerId),
+    index('learner_assessment_learner_idx').on(t.schoolId, t.learnerId),
+    index('learner_assessment_creator_idx').on(t.createdByActorId), index('learner_assessment_updater_idx').on(t.updatedByActorId),
+    index('learner_assessment_completer_idx').on(t.completedByActorId), index('learner_assessment_absent_actor_idx').on(t.absentByActorId),
+    check('learner_assessment_version', sql `${t.rowVersion} > 0 and ${t.archivedAt} is null`),
+    check('learner_assessment_state', sql `(${t.status} = 'in_progress' and ${t.completedAt} is null and ${t.completedByActorId} is null and ${t.absentAt} is null and ${t.absentByActorId} is null) or (${t.status} = 'completed' and ${t.completedAt} is not null and ${t.completedByActorId} is not null and ${t.absentAt} is null and ${t.absentByActorId} is null) or (${t.status} = 'absent' and ${t.absentAt} is not null and ${t.absentByActorId} is not null and ${t.completedAt} is null and ${t.completedByActorId} is null and ${t.feedback} is null)`)]);
+export const criterionObservations = pgTable('criterion_observations', {
+    ...tenant(), learnerAssessmentId: uuid('learner_assessment_id').notNull(), criterionId: uuid('criterion_id').notNull(), indicatorId: uuid('indicator_id').notNull(),
+}, t => [tenantKey(t), tenantFk(t, t.learnerAssessmentId, learnerAssessments), tenantFk(t, t.criterionId, assessmentCriteria), tenantFk(t, t.indicatorId, assessmentIndicators),
+    unique('criterion_observation_once').on(t.schoolId, t.learnerAssessmentId, t.criterionId),
+    index('observation_criterion_idx').on(t.schoolId, t.criterionId), index('observation_indicator_idx').on(t.schoolId, t.indicatorId),
+    index('observation_creator_idx').on(t.createdByActorId), index('observation_updater_idx').on(t.updatedByActorId),
+    check('observation_version', sql `${t.rowVersion} > 0 and ${t.archivedAt} is null`)]);
+export const assessmentEvidence = pgTable('assessment_evidence', {
+    ...tenant(), learnerAssessmentId: uuid('learner_assessment_id').notNull(), assetId: uuid('asset_id').notNull(), taskId: uuid('task_id'), criterionId: uuid('criterion_id'),
+}, t => [tenantKey(t), tenantFk(t, t.learnerAssessmentId, learnerAssessments), tenantFk(t, t.assetId, mediaAssets), tenantFk(t, t.taskId, assessmentTasks), tenantFk(t, t.criterionId, assessmentCriteria),
+    unique('assessment_evidence_once').on(t.schoolId, t.learnerAssessmentId, t.assetId),
+    index('evidence_asset_idx').on(t.schoolId, t.assetId), index('evidence_task_idx').on(t.schoolId, t.taskId), index('evidence_criterion_idx').on(t.schoolId, t.criterionId),
+    index('evidence_creator_idx').on(t.createdByActorId), index('evidence_updater_idx').on(t.updatedByActorId),
+    check('evidence_version', sql `${t.rowVersion} > 0 and ${t.archivedAt} is null`)]);

@@ -1,0 +1,74 @@
+[
+  {
+    "name": "learners",
+    "script": "learner-assessment-integration.mjs",
+    "args": [],
+    "start": "2026-09-21T16:08:35.888Z",
+    "end": "2026-09-21T16:14:37.046Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "structured",
+    "script": "structured-assessment-integration.mjs",
+    "args": [],
+    "start": "2026-09-21T16:14:37.049Z",
+    "end": "2026-09-21T16:17:47.046Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "assessments",
+    "script": "assessment-integration.mjs",
+    "args": [],
+    "start": "2026-09-21T16:17:47.048Z",
+    "end": "2026-09-21T16:24:18.060Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "foundation",
+    "script": "db-integration.mjs",
+    "args": [],
+    "start": "2026-09-21T16:24:18.062Z",
+    "end": "2026-09-21T16:25:42.982Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "administration",
+    "script": "admin-integration.mjs",
+    "args": [],
+    "start": "2026-09-21T16:25:42.983Z",
+    "end": "2026-09-21T16:28:10.882Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "files",
+    "script": "files-integration.mjs",
+    "args": [],
+    "start": "2026-09-21T16:28:10.887Z",
+    "end": "2026-09-21T16:30:45.374Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "lifecycle",
+    "script": "lifecycle-integration.mjs",
+    "args": [],
+    "start": "2026-09-21T16:30:45.375Z",
+    "end": "2026-09-21T16:34:52.633Z",
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  {
+    "name": "concurrency",
+    "script": "db-concurrency.mjs",
+    "args": [],
+    "start": "2026-09-21T16:34:52.635Z",
+    "end": "2026-09-21T16:34:59.064Z",
+    "exitCode": 0,
+    "result": "PASS"
+  }
+]

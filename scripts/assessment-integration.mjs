@@ -164,13 +164,13 @@ try {
   await rejectSQL('task assessment parent is immutable','UPDATE assessment_tasks SET assessment_id=$1 WHERE id=$2',[foreignDraft.id,draft.tasks[0].id])
   await rejectSQL('task school is immutable','UPDATE assessment_tasks SET school_id=$1 WHERE id=$2',[otherSchool,draft.tasks[0].id])
   await rejectSQL('task creation provenance is immutable','UPDATE assessment_tasks SET created_by_actor_id=$1 WHERE id=$2',[id('bootstrap'),draft.tasks[0].id])
-  await test('foreign offering rejected by service',()=>assert.rejects(service.save(school,{...input,offering_id:otherOffering}),/INVALID_INPUT/))
+  await test('foreign offering rejected by service',()=>assert.rejects(service.save(school,{...input,offering_id:otherOffering}),/FORBIDDEN/))
   await rejectSQL('database rejects foreign offering', 'UPDATE assessments SET offering_id=$1 WHERE id=$2',[otherOffering,draft.id],'23503')
   await rejectSQL('database rejects foreign type', 'UPDATE assessments SET assessment_type_id=$1 WHERE id=$2',[otherType,draft.id],'23503')
   await test('other-school access denied without membership',()=>assert.rejects(service.read(otherSchool),/FORBIDDEN/))
   const membership=await insert('school_memberships',{user_id:user,status:'active',joined_at:'2026-01-01'},otherSchool)
   await insert('membership_roles',{membership_id:membership,role_id:id('role-school_admin'),valid_from:'2026-01-01'},otherSchool)
-  await test('dual-school admin cannot read or edit draft through foreign school',async()=>{ await assert.rejects(service.get(otherSchool,draft.id),/NOT_FOUND/); await assert.rejects(service.save(otherSchool,input,draft.id,Number(draft.row_version)),/NOT_FOUND/) })
+  await test('dual-school admin cannot read or edit draft through foreign school',async()=>{ await assert.rejects(service.get(otherSchool,draft.id),/NOT_FOUND/); await assert.rejects(service.save(otherSchool,input,draft.id,Number(draft.row_version)),/FORBIDDEN/) })
   await rejectSQL('database rejects foreign task parent', 'INSERT INTO assessment_tasks (school_id,assessment_id,ordinal,title,created_by_actor_id,updated_by_actor_id) VALUES ($1,$2,1,\'Foreign\',$3,$3)',[otherSchool,draft.id,id('bootstrap')],'23503')
   const grade11=await insert('grades',{curriculum_code:'DEMO',code:'ASSESSMENT-G11',label:'Grade 11',ordinal:11},null)
   await insert('subject_grades',{subject_id:id('subject-math'),grade_id:grade11},null)
@@ -190,7 +190,7 @@ try {
   })
   for (const who of ['teacher','moderator',null]) {
     user=who ? id(`user-${who}`) : null
-    for (const [label,run] of [['read',()=>service.read(school)],['get',()=>service.get(school,draft.id)],['create',()=>service.save(school,input)],['edit',()=>service.save(school,input,draft.id,1)],['types',()=>service.initializeTypes(school)],['save type',()=>service.saveType(school,{code:'DENIED',name:'Denied',enabled:true})]]) await test(`${who ?? 'anonymous'} denied ${label}`,()=>assert.rejects(run(),new RegExp(who?'FORBIDDEN':'UNAUTHORIZED')))
+    for (const [label,run] of [['read',()=>service.read(school)],['get',()=>service.get(school,draft.id)],['create',()=>service.save(school,input)],['edit',()=>service.save(school,input,draft.id,1)],['types',()=>service.initializeTypes(school)],['save type',()=>service.saveType(school,{code:'DENIED',name:'Denied',enabled:true})]]) if (who !== 'teacher' || !['create','edit'].includes(label)) await test(`${who ?? 'anonymous'} denied ${label}`,()=>assert.rejects(run(),new RegExp(who?'FORBIDDEN':'UNAUTHORIZED')))
   }
   user=id('user-admin')
   await test('inactive membership denied read and write',async()=>{

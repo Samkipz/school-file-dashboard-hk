@@ -1,21 +1,29 @@
 import { randomUUID } from 'node:crypto'
 import type { Pool, PoolClient } from 'pg'
 
-export class DomainError extends Error {
-  code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'INVALID_INPUT' | 'CONFLICT'
-  constructor(code: DomainError['code']) { super(code); this.code = code }
-}
-export function uuidInput(value: string) {
-  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new DomainError('INVALID_INPUT')
-  return value
-}
-export function learnerName(value: string) {
-  if (typeof value !== 'string' || !value.trim() || value.trim().length > 160) throw new DomainError('INVALID_INPUT')
-  return value.trim()
-}
+import { DomainError, uuidInput, learnerName } from './validation.ts'
+export { DomainError, uuidInput, learnerName } from './validation.ts'
 export type Context = { membership_id: string; actor_id: string; school_id: string; timezone: string; roles: string[] }
-type Offering = { id: string; subject: string; class_name: string; year: string }
+export type Offering = { id: string; subject: string; class_name: string; year: string; academic_year_id: string; grade: string }
 type Learner = { id: string; display_name: string; row_version: string }
+
+// Reused inside an already authorized school transaction.
+export async function loadOfferingRoster(client: PoolClient, context: Context, offeringId: string) {
+  return (await client.query<Learner>(`SELECT l.id, l.display_name, l.row_version FROM learner_subject_enrolments se
+          JOIN learner_enrolments e ON e.school_id = se.school_id AND e.id = se.enrolment_id
+          JOIN class_placements p ON p.school_id = se.school_id AND p.id = se.placement_id
+          JOIN learners l ON l.school_id = e.school_id AND l.id = e.learner_id
+          JOIN learner_admissions a ON a.school_id = e.school_id AND a.id = e.admission_id
+          JOIN academic_years y ON y.school_id = e.school_id AND y.id = e.academic_year_id
+          WHERE se.school_id = $1 AND se.offering_id = $2 AND se.status = 'active' AND se.archived_at IS NULL
+            AND e.status = 'active' AND e.archived_at IS NULL AND l.status = 'active' AND l.archived_at IS NULL
+            AND p.archived_at IS NULL AND a.status = 'active' AND a.archived_at IS NULL
+            AND (now() AT TIME ZONE $3)::date BETWEEN se.starts_on AND coalesce(se.ends_on,y.ends_on)
+            AND (now() AT TIME ZONE $3)::date BETWEEN p.starts_on AND coalesce(p.ends_on,y.ends_on)
+            AND (now() AT TIME ZONE $3)::date BETWEEN e.starts_on AND coalesce(e.ends_on,y.ends_on)
+            AND (now() AT TIME ZONE $3)::date BETWEEN a.admitted_on AND coalesce(a.left_on,y.ends_on)
+          ORDER BY l.display_name, l.id`, [context.school_id, offeringId, context.timezone])).rows
+}
 
 // Identity comes only from the server session adapter. This factory is not a Server Action.
 export function foundationService(pool: Pool, identify: () => Promise<string | null>) {
@@ -68,18 +76,40 @@ export function foundationService(pool: Pool, identify: () => Promise<string | n
   return {
     // Server-only composition point; callers still receive verified session context.
     inSchool,
+    async authorizeOffering(client: PoolClient, context: Context, offeringId: string, scope: 'accessible' | 'assigned' = 'accessible') {
+      uuidInput(offeringId)
+      const admin = scope === 'accessible' && context.roles.includes('school_admin')
+      if (!admin && !context.roles.includes('teacher')) throw new DomainError('FORBIDDEN')
+      const allowed = await client.query(`SELECT o.id ${offeringFrom} WHERE o.school_id=$1 AND o.id=$4
+        AND (${admin ? '$2::uuid IS NOT NULL AND $3::text IS NOT NULL' : `${offeringActive} AND ${assignmentExists}`})`, [context.school_id, context.membership_id, context.timezone, offeringId])
+      if (!allowed.rowCount) throw new DomainError('FORBIDDEN')
+    },
     async listSchools() {
       const userId = await identity()
       return (await pool.query<{ id: string; name: string }>(`SELECT s.id, s.name FROM schools s JOIN school_memberships m ON m.school_id = s.id
         WHERE m.user_id = $1 AND m.status = 'active' AND m.archived_at IS NULL AND m.joined_at <= now() AND m.ended_at IS NULL
           AND s.status = 'active' AND s.archived_at IS NULL ORDER BY s.name`, [userId])).rows
     },
-    getFoundation(schoolId: string) {
+    getSchoolContext(schoolId: string) {
       return inSchool(schoolId, async (client, context) => {
-        const admin = context.roles.includes('school_admin')
+        const years = (await client.query<{ id: string; code: string }>(`SELECT id, code FROM academic_years
+          WHERE school_id=$1 AND status='active' AND archived_at IS NULL
+            AND (now() AT TIME ZONE $2)::date BETWEEN starts_on AND ends_on ORDER BY code,id`, [schoolId, context.timezone])).rows
+        const terms = (await client.query<{ id: string; code: string; academic_year_id: string }>(`SELECT t.id,t.code,t.academic_year_id FROM terms t
+          JOIN academic_years y ON y.school_id=t.school_id AND y.id=t.academic_year_id
+          WHERE t.school_id=$1 AND t.archived_at IS NULL AND y.archived_at IS NULL AND y.status='active'
+            AND (now() AT TIME ZONE $2)::date BETWEEN y.starts_on AND y.ends_on
+            AND (now() AT TIME ZONE $2)::date BETWEEN t.starts_on AND t.ends_on ORDER BY t.ordinal,t.id`, [schoolId, context.timezone])).rows
+        return { canManage: context.roles.includes('school_admin'), canTeach: context.roles.includes('teacher'), years, terms }
+      })
+    },
+    getFoundation(schoolId: string, scope: 'accessible' | 'assigned' = 'accessible') {
+      return inSchool(schoolId, async (client, context) => {
+        const admin = scope === 'accessible' && context.roles.includes('school_admin')
         if (!admin && !context.roles.includes('teacher')) return { offerings: [] as Offering[], canManage: false }
-        const offerings = await client.query<Offering>(`SELECT o.id, ss.display_name AS subject, c.label AS class_name, y.code AS year
-          ${offeringFrom} WHERE o.school_id = $1 AND (${admin ? '$2::uuid IS NOT NULL AND $3::text IS NOT NULL' : `${offeringActive} AND ${assignmentExists}`}) ORDER BY y.code, c.label, ss.display_name`, [schoolId, context.membership_id, context.timezone])
+        const offerings = await client.query<Offering>(`SELECT o.id, ss.display_name AS subject, c.label AS class_name, y.code AS year, y.id AS academic_year_id, g.label AS grade
+          ${offeringFrom} JOIN grades g ON g.id=o.grade_id
+          WHERE o.school_id = $1 AND (${admin ? '$2::uuid IS NOT NULL AND $3::text IS NOT NULL' : `${offeringActive} AND ${assignmentExists}`}) ORDER BY y.code, c.label, ss.display_name`, [schoolId, context.membership_id, context.timezone])
         return { offerings: offerings.rows, canManage: admin }
       })
     },
@@ -91,20 +121,7 @@ export function foundationService(pool: Pool, identify: () => Promise<string | n
         const allowed = await client.query(`SELECT o.id ${offeringFrom} WHERE o.school_id = $1 AND o.id = $4
           AND (${admin ? '$2::uuid IS NOT NULL AND $3::text IS NOT NULL' : `${offeringActive} AND ${assignmentExists}`})`, [schoolId, context.membership_id, context.timezone, offeringId])
         if (!allowed.rowCount) throw new DomainError('NOT_FOUND')
-        return (await client.query<Learner>(`SELECT l.id, l.display_name, l.row_version FROM learner_subject_enrolments se
-          JOIN learner_enrolments e ON e.school_id = se.school_id AND e.id = se.enrolment_id
-          JOIN class_placements p ON p.school_id = se.school_id AND p.id = se.placement_id
-          JOIN learners l ON l.school_id = e.school_id AND l.id = e.learner_id
-          JOIN learner_admissions a ON a.school_id = e.school_id AND a.id = e.admission_id
-          JOIN academic_years y ON y.school_id = e.school_id AND y.id = e.academic_year_id
-          WHERE se.school_id = $1 AND se.offering_id = $2 AND se.status = 'active' AND se.archived_at IS NULL
-            AND e.status = 'active' AND e.archived_at IS NULL AND l.status = 'active' AND l.archived_at IS NULL
-            AND p.archived_at IS NULL AND a.status = 'active' AND a.archived_at IS NULL
-            AND (now() AT TIME ZONE $3)::date BETWEEN se.starts_on AND coalesce(se.ends_on,y.ends_on)
-            AND (now() AT TIME ZONE $3)::date BETWEEN p.starts_on AND coalesce(p.ends_on,y.ends_on)
-            AND (now() AT TIME ZONE $3)::date BETWEEN e.starts_on AND coalesce(e.ends_on,y.ends_on)
-            AND (now() AT TIME ZONE $3)::date BETWEEN a.admitted_on AND coalesce(a.left_on,y.ends_on)
-          ORDER BY l.display_name, l.id`, [schoolId, offeringId, context.timezone])).rows
+        return loadOfferingRoster(client, context, offeringId)
       })
     },
     renameLearner(schoolId: string, learnerId: string, name: string, expectedVersion: number) {

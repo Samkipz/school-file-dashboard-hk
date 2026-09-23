@@ -1,0 +1,5 @@
+PASS teacher Home and role navigation
+PASS My Teaching assigned offerings
+PASS offering Overview and Learners
+PASS refreshed roster context
+Teaching browser PASS: role navigation, real offerings, context links, subject tabs, correct roster, refresh, 390px layout, mobile focus/Tab/Escape, forged contexts denied, admin drafts denied, private files retained. No academic or storage mutations.

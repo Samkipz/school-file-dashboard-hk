@@ -1,5 +1,9 @@
 # Assessment evidence decisions
 
+## Learner slice implementation (2026-09-21)
+
+The latest owner request explicitly permits removal of in-progress evidence associations and locks them at completion. This supersedes the earlier proposed permanent hold on removed in-progress references. Live references prevent asset archival; teacher access remains current-assignment/current-roster scoped. Admin historical private-file access is preserved without granting admin-only result-entry rights. Evidence metadata is reused from the asset under the latest request to avoid unnecessary duplication. See [implemented boundaries and verification](LEARNER_ASSESSMENT_IMPLEMENTATION.md); the original approved policy below remains historical context.
+
 Date: 2026-09-14.
 
 ## Approved policy

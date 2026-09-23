@@ -1,0 +1,38 @@
+﻿[
+    {
+        "file":  "0000_foundation.sql",
+        "Hash":  "73A515CA20F3799803C9A43F55FA344650B8E97C508A0EC80B3881952EA086F1"
+    },
+    {
+        "file":  "0001_foundation_guards.sql",
+        "Hash":  "746D27B844F67C719A0AC66C9B839F453D6EAA0EFBF765F8695B7511D77DBF40"
+    },
+    {
+        "file":  "0002_portfolio_media.sql",
+        "Hash":  "11F297244215247102984891E2C94503DF9BC01E01FBC8960D982FDED87EBCF7"
+    },
+    {
+        "file":  "0003_assessment_drafts.sql",
+        "Hash":  "F76FA50915B180C9902E41F4BDC4AC2D6FF83E0258EAD448463442E0D07F63D5"
+    },
+    {
+        "file":  "0004_assessment_draft_guards.sql",
+        "Hash":  "94200B78E4115A78C6190F5F5D3E40FA2104E661633F533582AD1ABF11D5B6D7"
+    },
+    {
+        "file":  "0005_assessment_nonblank.sql",
+        "Hash":  "936EF1479D9846338FADCA9941B5EF5C1E7E714935DF7D8FD14B9AE43BD51884"
+    },
+    {
+        "file":  "0006_assessment_task_order.sql",
+        "Hash":  "58AE41EE0FD221ECE6617B543C61AF75289A06594D351F5B67903001B8C4C0C8"
+    },
+    {
+        "file":  "0007_structured_assessments.sql",
+        "Hash":  "B1889091C9E320EA909ED4F80FFF9BC41F341972030AFD082A3D5D661BEA8102"
+    },
+    {
+        "file":  "0008_structured_guards.sql",
+        "Hash":  "17A5FAF58CE62B75EC7E16F10D9EADD61A27E292CFA8890A9FD64D8F0481637B"
+    }
+]

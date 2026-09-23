@@ -1,5 +1,17 @@
 # SchoolHub Testing Standards
 
+## Learner result verification (2026-09-21)
+
+Default tests now cover exact result derivation, required observations, transitions, deterministic next selection, controlled actions and assessment-scoped evidence downloads. `test:assessments:learners` is rollback-only PostgreSQL verification; `--review-forward` reviews migrations 0009–0011 from the nine-entry predecessor. `test:assessments:learners:browser -- --retain-test-evidence` uses synthetic retained assessment/results and real concurrent transactions. It does not upload R2 objects. [The implementation record](LEARNER_ASSESSMENT_IMPLEMENTATION.md) distinguishes executed passes from incomplete attempts and deferred functionality.
+
+## Structured assessment verification (2026-09-20)
+
+Default tests cover exact fractional scoring, maxima, range boundaries/gaps/overlaps and controlled opening errors. `test:assessments:structured` runs rollback-only authorization/structure/lifecycle checks; `--review-forward` reviews migration 0007/0008 against the seven-entry predecessor. `test:assessments:structured:browser` exercises the real teacher authoring/opening journey with synthetic retained browser evidence. See [actual executions and limits](STRUCTURED_ASSESSMENT_IMPLEMENTATION.md).
+
+## CBE shell checks (2026-09-20)
+
+Default tests now cover capability-specific navigation, explicit school selection, context URL preservation, period ambiguity, denied context and authorized roster-derived counts. Foundation PostgreSQL integration additionally verifies assigned-only scope, mixed-role behavior and current period data. `npm run test:teaching:browser` checks the seeded teacher journey against a running local production server, including roster refresh, mobile navigation/focus and denied contexts. It performs no academic/storage mutations; authentication sessions are signed out and its temporary Chrome profile is cleaned up. Screenshots are synthetic development evidence. Actual executions and limits are recorded in [CBE_SHELL_IMPLEMENTATION.md](CBE_SHELL_IMPLEMENTATION.md).
+
 ## Draft hardening checks (2026-09-16)
 
 Assessment integration now covers stable UUID/provenance, malicious ID claims, combined task mutation audit rollback and direct-SQL ECMAScript whitespace rejection. `--review-forward` applies 0005/0006 and runs checks in a rollback-only transaction before deployment. Administration audit assertions select this fixture's new events rather than school-wide historical totals. Browser verification covers real add/edit/reorder/remove actions and retained IDs. See [actual rerun evidence](ASSESSMENT_DRAFT_HARDENING.md); test definitions alone do not imply passing execution.
