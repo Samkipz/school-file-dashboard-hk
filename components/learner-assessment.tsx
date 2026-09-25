@@ -1,9 +1,9 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { assessLearner } from '@/app/actions/learner-assessments'
+import { assessLearner, uploadLearnerEvidence } from '@/app/actions/learner-assessments'
 import { calculateResult, statusLabel, type EvidenceInput } from '@/lib/domain/learner-result'
 import { scoreText } from '@/lib/domain/scoring-guide'
 import type { AssessmentRosterData, LearnerAssessmentData } from '@/lib/domain/learner-assessments'
@@ -29,8 +29,10 @@ export function LearnerAssessment({ school, data }: { school: string; data: Lear
   const [selected,setSelected] = useState(Object.fromEntries(data.observations.map(o => [o.criterion_id,o.indicator_id])))
   const [feedback,setFeedback] = useState(row?.feedback ?? '')
   const [evidence,setEvidence] = useState<EvidenceInput[]>(data.evidence.map(({asset_id,task_id,criterion_id}) => ({asset_id,task_id,criterion_id})))
+  const [assets,setAssets] = useState(data.assets)
   const [version] = useState(Number(row?.row_version ?? 0))
   const [message,setMessage] = useState(''), [failed,setFailed] = useState(false), [pending,start] = useTransition(), [dirty,setDirty] = useState(false)
+  const [uploading,setUploading] = useState(false), [uploadMessage,setUploadMessage] = useState('')
   const state = row?.status ?? 'not_started', locked = state === 'completed', absent = state === 'absent'
   const observations = Object.entries(selected).map(([criterion_id,indicator_id]) => ({criterion_id,indicator_id}))
   const result = calculateResult(a.tasks,a.levels,observations,absent ? 'absent' : state === 'not_started' && !observations.length ? 'not_started' : 'in_progress')
@@ -50,6 +52,21 @@ export function LearnerAssessment({ school, data }: { school: string; data: Lear
       if (saved.ok) { setDirty(false); if (command === 'complete') router.push(resultHref(school,a.offering_id,a.id,saved.next ?? undefined)); router.refresh() }
     })
   }
+  async function uploadEvidenceFile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = event.currentTarget, payload = new FormData(form)
+    setUploading(true); setUploadMessage(''); setFailed(false)
+    try {
+      const saved = await uploadLearnerEvidence(school,a.id,learner.id,payload)
+      setUploadMessage(saved.message); setFailed(!saved.ok)
+      if (saved.ok && saved.asset) {
+        setAssets(current => [{ id: saved.asset!.id, title: saved.asset!.title }, ...current.filter(f => f.id !== saved.asset!.id)])
+        setEvidence(current => current.some(e => e.asset_id === saved.asset!.id) ? current : [...current,{ asset_id: saved.asset!.id, task_id: null, criterion_id: null }])
+        setDirty(true)
+        form.reset()
+      }
+    } finally { setUploading(false) }
+  }
   return <section className="space-y-6">
     <Link className={linkClass} onClick={e => { if (dirty && !window.confirm('Leave without saving your changes?')) e.preventDefault() }} href={resultHref(school,a.offering_id,a.id)}>← Assessment roster</Link>
     <header className="space-y-2"><h2 className="break-words text-2xl font-semibold">{a.title}</h2><h3 className="break-words text-xl font-semibold">{learner.display_name}</h3><p className="text-muted-foreground">Learner {data.roster.findIndex(l => l.id === learner.id)+1} of {data.roster.length} · {statusLabel[state]}</p>
@@ -67,19 +84,29 @@ export function LearnerAssessment({ school, data }: { school: string; data: Lear
           <p className="text-sm text-muted-foreground">Criterion score: {result.tasks[t].criteria[n].units === null ? '—' : scoreText(result.tasks[t].criteria[n].units!)} / {scoreText(result.tasks[t].criteria[n].maximum)}</p>
         </fieldset>)}<p className="font-medium pt-3 border-t">Task score: {scoreText(result.tasks[t].units)} / {scoreText(result.tasks[t].maximum)}</p></section>)}
       <label className="block space-y-2"><span className="font-medium">Teacher feedback (optional, up to 4,000 characters)</span><textarea aria-label="Teacher feedback" maxLength={4000} className="block min-h-28 w-full rounded border bg-background p-3" value={feedback} onChange={e => setFeedback(e.target.value)} /></label>
-      <section className="space-y-4"><h4 className="text-lg font-semibold">Evidence</h4><p className="text-sm text-muted-foreground">Attach an existing learner file. Ask an administrator to upload new evidence through Private Files.</p>
-        {!data.assets.length && !evidence.length && <p className="text-muted-foreground">No evidence files available.</p>}
-        {evidence.map(e => <div key={e.asset_id} className="space-y-3 rounded-lg border bg-card p-4"><p className="break-words font-medium">{data.assets.find(f => f.id === e.asset_id)?.title ?? data.evidence.find(f => f.asset_id === e.asset_id)?.title ?? 'Unavailable file'}</p>
+      <section className="space-y-4"><h4 className="text-lg font-semibold">Evidence</h4><p className="text-sm text-muted-foreground">Upload a photo or file from this device, or attach an existing learner file. Save to keep attachments with this assessment.</p>
+        {!assets.length && !evidence.length && <p className="text-muted-foreground">No evidence files yet.</p>}
+        {evidence.map(e => <div key={e.asset_id} className="space-y-3 rounded-lg border bg-card p-4"><p className="break-words font-medium">{assets.find(f => f.id === e.asset_id)?.title ?? data.evidence.find(f => f.asset_id === e.asset_id)?.title ?? 'Unavailable file'}</p>
           <label className={labelClass}><span className="font-medium">Applies to</span><select aria-label="Evidence applies to" className={field} value={e.criterion_id ? `criterion:${e.criterion_id}` : e.task_id ? `task:${e.task_id}` : ''} onChange={event => { const [kind,id]=event.target.value.split(':'); setEvidence(evidence.map(f => f.asset_id === e.asset_id ? {...f,task_id:kind==='task'?id:null,criterion_id:kind==='criterion'?id:null} : f)) }}><option value="">Entire assessment</option>{a.tasks.map((t,i) => <optgroup key={t.id} label={`Task ${i+1}: ${t.title}`}><option value={`task:${t.id}`}>Task {i+1}</option>{t.criteria.map(c => <option key={c.id} value={`criterion:${c.id}`}>{c.title}</option>)}</optgroup>)}</select></label>
           {!locked && <Button type="button" variant="outline" onClick={() => { setEvidence(evidence.filter(f => f.asset_id !== e.asset_id)); setDirty(true) }}>Remove evidence</Button>}
         </div>)}
-        {!locked && <label className={labelClass}><span className="font-medium">Attach evidence</span><select aria-label="Attach evidence" className={field} value="" onChange={event => { if(event.target.value) setEvidence([...evidence,{asset_id:event.target.value,task_id:null,criterion_id:null}]) }}><option value="">Select a learner file</option>{data.assets.filter(f => !evidence.some(e => e.asset_id === f.id)).map(f => <option key={f.id} value={f.id}>{f.title}</option>)}</select></label>}
+        {!locked && <label className={labelClass}><span className="font-medium">Attach existing file</span><select aria-label="Attach existing file" className={field} value="" onChange={event => { if(event.target.value) setEvidence([...evidence,{asset_id:event.target.value,task_id:null,criterion_id:null}]) }}><option value="">Select a learner file</option>{assets.filter(f => !evidence.some(e => e.asset_id === f.id)).map(f => <option key={f.id} value={f.id}>{f.title}</option>)}</select></label>}
       </section>
       </fieldset>
 {data.evidence.map(e => <p key={e.id} className="mt-2">{e.available ? <a className={linkClass} href={`/academics/evidence/${e.id}?` + new URLSearchParams({school,assessment:a.id,learner:learner.id})}>Download {e.title}</a> : <span className="text-destructive">Evidence unavailable: {e.title}. Remove it or ask your administrator before saving.</span>}</p>)}
       {!locked && <div className="flex flex-wrap gap-3 pt-4 border-t"><Button type="submit" disabled={pending || !dirty}>Save</Button><Button type="button" disabled={pending} onClick={() => submit('complete')}>Complete & Next</Button><Button type="button" variant="outline" disabled={pending} onClick={() => submit('absent')}>Mark absent</Button></div>}
-      {!locked && <p className="text-sm text-muted-foreground">Save keeps work in progress. Complete & Next requires every criterion and makes this learner's assessment read-only.</p>}
-    </form></>}
+      {!locked && <p className="text-sm text-muted-foreground">Save keeps work in progress. Complete & Next requires every criterion and makes this learner&apos;s assessment read-only.</p>}
+    </form>
+    {!locked && <form onSubmit={uploadEvidenceFile} className="space-y-3 rounded-xl border bg-card p-5" aria-label="Upload evidence">
+      <h4 className="text-lg font-semibold">Upload evidence</h4>
+      <p className="text-sm text-muted-foreground">PDF, JPEG, PNG, WebP or MP4. Maximum 10 MB. Stored privately for this learner.</p>
+      <label className={labelClass}><span className="font-medium">File</span><input aria-label="Evidence file" className={field} name="file" type="file" required disabled={uploading || pending} accept=".pdf,.jpg,.jpeg,.png,.webp,.mp4" /></label>
+      <label className={labelClass}><span className="font-medium">Title (optional)</span><input aria-label="Evidence title" className={field} name="title" maxLength={160} disabled={uploading || pending} /></label>
+      <input type="hidden" name="description" value="" /><input type="hidden" name="category" value="work" />
+      <Button type="submit" disabled={uploading || pending}>{uploading ? 'Uploading…' : 'Upload file'}</Button>
+      {uploadMessage && <p role={failed ? 'alert' : 'status'} className="break-words">{uploadMessage}</p>}
+    </form>}
+    </>}
     {message && <p role={failed ? 'alert' : 'status'} className="mt-4 break-words">{message}</p>}
     {failed && <Button variant="outline" className="mt-4" onClick={() => { if (!dirty || window.confirm('Reload and discard unsaved changes?')) window.location.reload() }}>Reload</Button>}
   </section>

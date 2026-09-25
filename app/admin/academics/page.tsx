@@ -20,10 +20,10 @@ export default async function AdministrationPage({ searchParams }: { searchParam
     }
   })()
 return <AppLayout school={params.school}><div className="space-y-6 py-4 sm:py-6">
-    <header className="space-y-2"><h1 className="text-3xl font-bold">School administration</h1><p className="text-muted-foreground">Admissions, classes and teaching responsibilities.</p></header>
     {!loaded ? <p className="text-muted-foreground">School administrator access is required. <Link className="underline font-medium" href="/academics">View your teaching assignments</Link></p> : <>
-      <nav aria-label="Schools" className="flex flex-wrap gap-3">{loaded.schools.map(s => <Link key={s.id} className="underline font-medium" aria-current={s.id === loaded.school?.id ? 'page' : undefined} href={`/admin/academics?school=${s.id}`}>{s.name}</Link>)}</nav>
-      {loaded.school && loaded.data ? <AcademicAdministration key={loaded.school.id} school={loaded.school.id} data={loaded.data} /> : <p className="text-muted-foreground">No available school. Select an active school membership.</p>}
+      {loaded.school && loaded.data ? <>
+        <AcademicAdministration key={loaded.school.id} school={loaded.school.id} data={loaded.data} />
+      </> : <p className="text-muted-foreground">No available school. Select an active school membership.</p>}
     </>}
   </div></AppLayout>
 }

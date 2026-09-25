@@ -1,10 +1,12 @@
 'use client'
 
-import { useActionState, useId, useState } from 'react'
+import { useActionState, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { administer } from '@/app/actions/administration'
 import { AcademicRollover } from '@/components/academic-rollover'
+import { currentPeriodLabel, termPresentationState } from '@/lib/academic-navigation'
 import type { AdminData, AdminRow } from '@/lib/domain/administration'
+import { classCoverage, currentClassRoster, groupClassesByGrade } from '@/lib/domain/class-administration'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,7 +41,16 @@ function History({ title, rows }: { title: string; rows: { id: string; title: st
   return <section className="space-y-2"><h3 className="font-semibold">{title}</h3>{rows.length ? <ul className="divide-y rounded-md border">{rows.map(r => <li key={r.id} className="p-3"><p className="font-medium">{r.title}</p><p className="text-sm text-muted-foreground">{r.detail}</p></li>)}</ul> : <p className="text-sm text-muted-foreground">No records yet.</p>}</section>
 }
 export function AcademicAdministration({ school, data: d }: { school: string; data: AdminData }) {
-  const [section, setSection] = useState('Learners')
+  const sections = ['Calendar', 'Classes', 'Subjects', 'Teaching', 'Assessment', 'Year-End']
+  const sectionMeta: Record<string, { title: string; description: string }> = {
+    Calendar: { title: 'Calendar', description: 'Manage academic years and school terms.' },
+    Classes: { title: 'Classes', description: 'Manage class groups and academic placement.' },
+    Subjects: { title: 'Subjects', description: 'Manage school subjects and offerings.' },
+    Teaching: { title: 'Teaching', description: 'Review staff assignments and teaching coverage.' },
+    Assessment: { title: 'Assessment', description: 'Open assessment setup and planning tools.' },
+    'Year-End': { title: 'Year-End', description: 'Run rollover and end-of-year processes.' },
+  }
+  const [section, setSection] = useState('Calendar')
   const [learnerId, setLearnerId] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('active')
@@ -47,6 +58,14 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
   const [classId, setClassId] = useState('')
   const [enrolmentId, setEnrolmentId] = useState('')
   const [placementId, setPlacementId] = useState('')
+  const [yearCreateOpen, setYearCreateOpen] = useState(false)
+  const [yearEditId, setYearEditId] = useState<string | null>(null)
+  const [termEditId, setTermEditId] = useState<string | null>(null)
+  const [termCreateOpen, setTermCreateOpen] = useState(false)
+  const [termCreateYearId, setTermCreateYearId] = useState(d.academic_years.find(y => y.status === 'active')?.id ?? d.academic_years[0]?.id ?? '')
+  const [classCreateOpen, setClassCreateOpen] = useState(false)
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
+  const [classEditOpen, setClassEditOpen] = useState(false)
   const find = (rows: AdminRow[], id: unknown) => rows.find(r => r.id === id)
   const yearName = (id: unknown) => value(find(d.academic_years, id), 'code')
   const className = (id: unknown) => value(find(d.class_groups, id), 'label')
@@ -70,60 +89,130 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
   const subjectEnrolments = d.learner_subject_enrolments.filter(s => enrolments.some(e => e.id === s.enrolment_id))
   const f = (operation: string, title: string, fields: Field[], hidden: Record<string, string> = {}, hint?: string) => <WorkflowForm school={school} operation={operation} title={title} fields={fields} hidden={hidden} hint={hint} />
   const picker = (label: string, selected: string, change: (s: string) => void, opts: Option[]) => <label className="block space-y-1"><span className="text-sm font-medium">{label}</span><select className="block w-full border rounded-md h-10 px-3 bg-background" value={selected} onChange={e => change(e.target.value)}><option value="">Select {label.toLowerCase()}</option>{opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
+  const currentYear = useMemo(() => d.academic_years.find(y => y.status === 'active' && String(y.starts_on) <= d.today && (!y.ends_on || String(y.ends_on) >= d.today)) ?? d.academic_years.find(y => y.status === 'active') ?? d.academic_years[0], [d.academic_years, d.today])
+  const currentTerm = useMemo(() => {
+    if (!currentYear) return undefined
+    const yearTerms = d.terms.filter(t => t.academic_year_id === currentYear.id)
+    return yearTerms.find(t => String(t.starts_on) <= d.today && (!t.ends_on || String(t.ends_on) >= d.today)) ?? undefined
+  }, [currentYear, d.terms, d.today])
+  const otherYears = d.academic_years.filter(y => y.id !== currentYear?.id)
+  const renderYearEditor = (year: AdminRow, compact = false) => {
+    const fields = [{ ...field('code', 'Code'), value: value(year, 'code') }, date('starts_on', 'Start date', value(year, 'starts_on')), date('ends_on', 'End date', value(year, 'ends_on')), { ...field('status', 'Status', choices('draft', 'active', 'closed')), value: value(year, 'status') }]
+    return <div className="space-y-4">
+      {f('saveYear', compact ? 'Edit year' : 'Save academic year', fields, { id: year.id }, 'Date changes must still contain all existing terms, enrolments and assignments.')}
+    </div>
+  }
+  const renderTermEditor = (term: AdminRow, compact = false) => {
+    const fields = [{ ...field('code', 'Code'), value: value(term, 'code') }, { ...field('ordinal', 'Ordinal'), type: 'number', value: value(term, 'ordinal') }, date('starts_on', 'Start date', value(term, 'starts_on')), date('ends_on', 'End date', value(term, 'ends_on'))]
+    return <div className="space-y-4">{f('saveTerm', compact ? 'Edit term' : 'Save term', fields, { id: String(term.id), academic_year_id: String(term.academic_year_id) }, 'Terms are date-based and cannot include a current-term selector.')}</div>
+  }
+  const renderCreateTerm = (year: AdminRow) => <div className="space-y-4">{f('saveTerm', 'Add term', [field('academic_year_id', 'Academic year', years), field('code', 'Code'), { ...field('ordinal', 'Ordinal'), type: 'number' }, date('starts_on', 'Start date'), date('ends_on', 'End date')], { academic_year_id: year.id }, 'Add a valid term within the selected academic year.')}</div>
   return <div className="space-y-6">
-    <nav aria-label="Administration sections" className="flex flex-wrap gap-2">{['Learners', 'Classes', 'Academic Years & Terms', 'Subjects', 'Teacher Assignments', 'Academic Year Rollover'].map(s => <Button key={s} variant={section === s ? 'default' : 'outline'} onClick={() => setSection(s)} aria-pressed={section === s}>{s}</Button>)}</nav>
-    {section !== 'Learners' && section !== 'Academic Years & Terms' && section !== 'Academic Year Rollover' && <div className="max-w-md">{picker('Academic year filter', yearId, v => { setYearId(v); setClassId('') }, options(d.academic_years, r => value(r, 'code')))}</div>}
-    {section === 'Academic Year Rollover' && <AcademicRollover school={school} data={d} />}
-    {section === 'Learners' && <div className="grid lg:grid-cols-[minmax(240px,1fr)_3fr] gap-6">
-      <div className="space-y-4"><label className="block space-y-1"><span>Find a learner</span><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Name or admission number" /></label>
-        {picker('Learner status', statusFilter, setStatusFilter, [{ value: 'active', label: 'Active' }, { value: 'left', label: 'Withdrawn' }, { value: 'completed', label: 'Completed' }, { value: 'all', label: 'All statuses / history' }])}
-        <ul className="max-h-96 overflow-auto space-y-1">{d.learners.filter(l => statusFilter === 'all' || l.status === statusFilter).filter(l => `${l.display_name} ${d.learner_admissions.filter(a => a.learner_id === l.id).map(a => a.admission_number).join(' ')}`.toLowerCase().includes(search.toLowerCase())).map(l => <li key={l.id}><Button className="w-full justify-start" variant={learnerId === l.id ? 'secondary' : 'ghost'} onClick={() => { setLearnerId(l.id); setEnrolmentId(''); setPlacementId('') }}>{String(l.display_name)}</Button><span className="text-xs text-muted-foreground">{l.status === 'left' ? 'Withdrawn' : String(l.status)}</span></li>)}</ul>
-        {f('addLearner', 'Add learner', [field('display_name', 'Full name')], {}, 'Create the learner record, then select them to admit and enrol.')}
+    <header className="space-y-3">
+      <p className="text-sm font-medium text-primary">Academics</p>
+      <div className="space-y-3">
+        <h1 className="text-3xl font-bold leading-tight">{sectionMeta[section]?.title ?? 'Calendar'}</h1>
+        <p className="text-muted-foreground">{sectionMeta[section]?.description ?? 'Manage academic years and school terms.'}</p>
       </div>
-      <div className="space-y-6" key={learnerId}>{!learner ? <p>Select a learner to manage admission, enrolment, class placement and subjects.</p> : <>
-        <h2 className="text-2xl font-semibold">{String(learner.display_name)}</h2>
-        <p>Learner status: <strong>{learner.status === 'left' ? 'Withdrawn' : String(learner.status)}</strong></p>
-        <div className="grid md:grid-cols-2 gap-4">
-          {learner.status === 'active' && admissions.some(a => a.status === 'active') && <>
-            {f('withdrawLearner', 'Withdraw learner', [date('effective_on', 'Last day (on or before today)', d.today), field('reason', 'Withdrawal reason')], { learner_id: learnerId }, 'Closes admission, current enrolments, placements and subjects through this inclusive last day. Resolve future scheduled records first.')}
-            {f('completeLearner', 'Complete / graduate learner', [date('effective_on', 'Last day (on or before today)', d.today), field('reason', 'Completion reason')], { learner_id: learnerId }, 'Closes current academic records. Further enrolment requires explicit re-admission.')}
-          </>}
-          {['left', 'completed'].includes(String(learner.status)) && f('readmitLearner', 'Re-admit / reactivate learner', [date('effective_on', 'New admission date', d.today), field('admission_number', 'New unique admission number'), field('reason', 'Re-admission reason')], { learner_id: learnerId }, 'Must be after all prior admission end dates and on or before today. Creates a new admission; prior records stay closed. Only one enrolment per learner per academic year is allowed.')}
+      <div className="inline-flex rounded-full border bg-card px-3 py-2 text-sm font-medium"><span className="text-muted-foreground">Current context:</span> <span className="ml-2">{currentPeriodLabel(d.academic_years, 'year', d.today)} · {currentPeriodLabel(d.terms, 'term', d.today)}</span></div>
+    </header>
+
+    <nav aria-label="Academic administration sections" className="flex flex-wrap gap-2 border-b border-border pb-2">
+      {sections.map(s => <button key={s} type="button" onClick={() => setSection(s)} aria-pressed={section === s} className={`min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${section === s ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>{s}</button>)}
+    </nav>
+    {section !== 'Year-End' && section !== 'Assessment' && <div className="max-w-md">{picker('Academic year filter', yearId, v => { setYearId(v); setClassId(''); setSelectedClassId(null); setClassEditOpen(false) }, options(d.academic_years, r => value(r, 'code')))}</div>}
+    {section === 'Year-End' && <AcademicRollover school={school} data={d} />}
+    {section === 'Calendar' && <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-muted-foreground">Overview-first school calendar</div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setYearCreateOpen(v => !v)}>{yearCreateOpen ? 'Close' : '+ Add academic year'}</Button>
+          {currentYear && <Button onClick={() => { setTermCreateYearId(currentYear.id); setTermCreateOpen(v => !v) }}>{termCreateOpen ? 'Close' : '+ Add term'}</Button>}
         </div>
-        <History title="Lifecycle status history" rows={d.lifecycle_history.filter(h => h.learner_id === learnerId).map(h => ({ id: h.id, title: `${h.from_status === 'left' ? 'withdrawn' : h.from_status} → ${h.to_status === 'left' ? 'withdrawn' : h.to_status}`, detail: `Effective ${h.effective_on} · ${h.reason} · Recorded ${h.occurred_at}` }))} />
-        <History title={`Current academic placement · ${d.today}`} rows={placements.filter(p => learner.status === 'active' && current(p) && enrolments.some(e => e.id === p.enrolment_id && current(e))).map(p => ({ id: p.id, title: `${className(p.class_group_id)} · ${yearName(p.academic_year_id)}`, detail: period(p) }))} />
-        <div className="grid md:grid-cols-2 gap-4">
-          {learner.status === 'active' && !admissions.some(a => a.status === 'active') && f('admit', 'Admit learner', [field('admission_number', 'Admission number'), date('admitted_on', 'Admission date', d.today)], { learner_id: learnerId })}
-          {learner.status === 'active' && admissions.some(a => a.status === 'active') && f('enrol', 'Enrol for academic year', [field('admission_id', 'Admission', options(admissions.filter(a => a.status === 'active'), a => value(a, 'admission_number'))), field('academic_year_id', 'Academic year', years), field('grade_id', 'Grade', grades), date('starts_on', 'Enrolment start', d.today), date('ends_on', 'Enrolment end', undefined, true)], {}, 'Leave the end date empty to use the academic year end.')}
+      </div>
+      {yearCreateOpen && <div className="max-w-2xl">{f('saveYear', 'Create academic year', [field('code', 'Year code'), date('starts_on', 'Start date'), date('ends_on', 'End date'), { ...field('status', 'Status', choices('draft', 'active', 'closed')), value: 'draft' }])}</div>}
+      {currentYear && termCreateOpen && <div className="max-w-2xl">{renderCreateTerm(currentYear)}</div>}
+      {currentYear && <section className="rounded-xl border bg-card p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-primary">Current academic year</p>
+            <h2 className="text-2xl font-semibold">{String(currentYear.code)}</h2>
+            <p className="text-sm text-muted-foreground">{period(currentYear)} · {String(currentYear.status)}</p>
+          </div>
+          <Button variant="outline" onClick={() => setYearEditId(yearEditId === currentYear.id ? null : currentYear.id)}>{yearEditId === currentYear.id ? 'Close' : 'Edit year'}</Button>
         </div>
-        {picker('Enrolment to manage', enrolmentId, v => { setEnrolmentId(v); setPlacementId('') }, options(enrolments.filter(e => learner.status === 'active' && e.status === 'active'), e => `${yearName(e.academic_year_id)} · ${gradeName(e.grade_id)}`))}
-        {learner.status === 'active' && enrolment?.status === 'active' && <div className="space-y-4" key={enrolment.id}>
-          {f('place', 'Place in class', [field('class_group_id', 'Class', options(d.class_groups.filter(c => c.status === 'active' && c.academic_year_id === enrolment.academic_year_id && c.grade_id === enrolment.grade_id), c => value(c, 'label'))), date('starts_on', 'Placement start', d.today), date('ends_on', 'Placement end', undefined, true)], { enrolment_id: enrolment.id }, 'Use Transfer class below when a placement already covers the intended date.')}
-          {picker('Placement to manage', placementId, setPlacementId, options(placements.filter(p => p.enrolment_id === enrolment.id), p => `${className(p.class_group_id)} · ${period(p)}`))}
-          {placement && <div key={placement.id} className="grid md:grid-cols-2 gap-4">
-            {f('transfer', 'Transfer class', [field('class_group_id', 'Destination class', options(d.class_groups.filter(c => c.status === 'active' && c.id !== placement.class_group_id && c.academic_year_id === placement.academic_year_id && c.grade_id === placement.grade_id), c => value(c, 'label'))), date('starts_on', 'First day in new class', d.today)], { enrolment_id: enrolment.id, placement_id: placement.id }, 'The old placement and its subjects end the previous day. Enrol subjects for the new placement after transfer. Choose a transfer date after any scheduled subject start dates.')}
-            {f('enrolSubject', 'Enrol in subject', [field('offering_id', 'Subject offering', options(d.subject_offerings.filter(o => o.status === 'active' && o.class_group_id === placement.class_group_id), o => offeringName(o.id))), date('starts_on', 'Subject start', d.today), date('ends_on', 'Subject end', undefined, true)], { placement_id: placement.id })}
-          </div>}
+        {yearEditId === currentYear.id && <div className="mt-5">{renderYearEditor(currentYear, true)}</div>}
+      </section>}
+
+      <section className="rounded-xl border bg-card p-5 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-primary">Terms</p>
+            <h3 className="text-xl font-semibold">{currentYear ? String(currentYear.code) : 'Academic year terms'}</h3>
+          </div>
+          {currentYear && <Button variant="outline" onClick={() => { setTermCreateYearId(currentYear.id); setTermCreateOpen(v => !v) }}>{termCreateOpen ? 'Close' : '+ Add term'}</Button>}
+        </div>
+        {currentYear && <div className="mt-5 space-y-3">
+          {d.terms.filter(t => t.academic_year_id === currentYear.id).sort((a, b) => Number(a.ordinal) - Number(b.ordinal)).map(term => {
+            const state = termPresentationState(term, d.today)
+            const isCurrent = state === 'current'
+            const badgeClass = state === 'current' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' : state === 'past' ? 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+            return <div key={term.id} className="rounded-lg border p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{String(term.code)}</p>
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${badgeClass}`}>{isCurrent ? 'Current' : state[0].toUpperCase() + state.slice(1)}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{String(term.starts_on)} – {String(term.ends_on)} · Ordinal {String(term.ordinal)}</p>
+                </div>
+                <Button variant="outline" onClick={() => setTermEditId(termEditId === term.id ? null : term.id)}>{termEditId === term.id ? 'Close' : 'Edit'}</Button>
+              </div>
+              {termEditId === term.id && <div className="mt-4">{renderTermEditor(term, true)}</div>}
+            </div>
+          })}
         </div>}
-        <History title="Admission history" rows={admissions.map(a => ({ id: a.id, title: String(a.admission_number), detail: `${a.admitted_on} – ${a.left_on ?? 'present'} · ${a.status}` }))} />
-        <History title="Yearly enrolment history" rows={enrolments.map(e => ({ id: e.id, title: `${yearName(e.academic_year_id)} · ${gradeName(e.grade_id)}`, detail: `${period(e)} · ${e.status}` }))} />
-        <History title="Class placement history" rows={placements.map(p => ({ id: p.id, title: `${className(p.class_group_id)} · ${yearName(p.academic_year_id)}`, detail: period(p) }))} />
-        <History title="Subject enrolment history" rows={subjectEnrolments.map(s => ({ id: s.id, title: offeringName(s.offering_id), detail: `${period(s)} · ${s.status}` }))} />
-      </>}</div>
+      </section>
+
+      {otherYears.length > 0 && <section className="rounded-xl border bg-card p-5 sm:p-6">
+        <p className="text-sm font-medium text-primary">Other academic years</p>
+        <div className="mt-4 space-y-3">
+          {otherYears.map(y => <div key={y.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-medium">{String(y.code)}</p>
+              <p className="text-sm text-muted-foreground">{String(y.status)} · {period(y)}</p>
+            </div>
+            <Button variant="outline" onClick={() => setYearId(y.id)} className="w-full sm:w-auto">View</Button>
+          </div>)}
+        </div>
+      </section>}
     </div>}
     {section === 'Classes' && <div className="space-y-6">
-      <div className="max-w-xl">{f('saveClass', 'Create class', [field('academic_year_id', 'Academic year', years), field('grade_id', 'Grade', grades), field('code', 'Class code'), field('label', 'Class name'), { ...field('status', 'Status', choices('active', 'closed')), value: 'active' }])}</div>
-      <div className="grid md:grid-cols-2 gap-4">{classes.map(c => <details key={c.id} className="border rounded-lg p-4"><summary className="cursor-pointer font-medium">{String(c.label)} · {yearName(c.academic_year_id)} · {String(c.status)}</summary><div className="mt-4 space-y-4"><p>{d.class_placements.filter(p => p.class_group_id === c.id && current(p) && d.learner_enrolments.some(e => e.id === p.enrolment_id && current(e) && d.learners.some(l => l.id === e.learner_id && l.status === 'active'))).length} current placements</p>
-        {f('saveClass', 'Save class', [{ ...field('code', 'Class code'), value: value(c, 'code') }, { ...field('label', 'Class name'), value: value(c, 'label') }, { ...field('status', 'Status', choices('active', 'closed')), value: value(c, 'status') }], { id: c.id })}
-      </div></details>)}</div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div><p className="text-sm text-muted-foreground">Classes in {yearName(yearId) || 'the selected academic year'}</p><p className="text-sm text-muted-foreground">Organize learner groups by grade and inspect their current rosters.</p></div>
+        <Button onClick={() => setClassCreateOpen(open => !open)}>{classCreateOpen ? 'Close' : '+ Create class'}</Button>
+      </div>
+      {classCreateOpen && <div className="max-w-xl rounded-lg border bg-card p-5">
+        <div className="mb-4 space-y-1"><h2 className="text-lg font-semibold">Create class</h2><p className="text-sm text-muted-foreground">Academic year: <span className="font-medium text-foreground">{yearName(yearId) || 'None selected'}</span></p></div>
+        {yearId && grades.length ? f('saveClass', 'Create class', [field('grade_id', 'Grade', grades), field('code', 'Class code'), field('label', 'Class name')], { academic_year_id: yearId, status: 'active' }) : <p className="text-sm text-muted-foreground">{grades.length ? 'Select an academic year before creating a class.' : 'No active Grade catalogue entries are available, so a class cannot be created yet.'}</p>}
+      </div>}
+      {!classes.length ? <div className="rounded-lg border border-dashed p-6"><p className="font-medium">No classes have been created for {yearName(yearId) || 'the selected academic year'}.</p><p className="mt-1 text-sm text-muted-foreground">{grades.length ? 'Create the first class for this academic year.' : 'No active Grade catalogue entries are currently available. Class creation requires a configured Grade.'}</p></div> : <div className="space-y-6">
+        {[...groupClassesByGrade(classes)].map(([gradeId, gradeClasses]) => { const grade = find(d.grades, gradeId); const learners = gradeClasses.reduce((total, classGroup) => total + currentClassRoster(d, classGroup.id).length, 0); return <section key={gradeId} aria-labelledby={`grade-${gradeId}`} className="space-y-3">
+          <div><h2 id={`grade-${gradeId}`} className="font-semibold">{value(grade, 'label')}</h2><p className="text-sm text-muted-foreground">{gradeClasses.length} {gradeClasses.length === 1 ? 'class' : 'classes'} · {learners} current {learners === 1 ? 'learner' : 'learners'}</p></div>
+          <div className="divide-y rounded-lg border bg-card">{gradeClasses.map(c => { const roster = currentClassRoster(d, c.id); const coverage = classCoverage(d, c.id); const selected = selectedClassId === c.id; return <div key={c.id} className={`p-4 ${c.status === 'closed' ? 'bg-muted/30 text-muted-foreground' : ''}`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="font-medium break-words">{String(c.label)}</p><p className="text-sm text-muted-foreground">{String(c.code)} · {roster.length} current {roster.length === 1 ? 'learner' : 'learners'} · {String(c.status)}</p></div><Button variant="outline" onClick={() => { setSelectedClassId(selected ? null : c.id); setClassEditOpen(false) }}>{selected ? 'Close' : 'View'}</Button></div>
+            <p className="mt-2 text-xs text-muted-foreground">{coverage.offerings} subject {coverage.offerings === 1 ? 'offering' : 'offerings'} · {coverage.activeAssignments} active teaching {coverage.activeAssignments === 1 ? 'assignment' : 'assignments'}</p>
+            {selected && <div className="mt-5 space-y-6 border-t pt-5"><header className="space-y-2"><div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-semibold">{String(c.label)}</h3><span className="rounded-full border px-2.5 py-1 text-xs font-medium">{String(c.status)}</span></div><p className="text-sm text-muted-foreground">{value(grade, 'label')} · {yearName(c.academic_year_id)} · {String(c.code)}</p></header>
+              <div className="grid gap-3 sm:grid-cols-3"><div><p className="text-sm text-muted-foreground">Current learners</p><p className="text-lg font-semibold">{roster.length}</p></div><div><p className="text-sm text-muted-foreground">Subject offerings</p><p className="text-lg font-semibold">{coverage.offerings}</p></div><div><p className="text-sm text-muted-foreground">Active teaching assignments</p><p className="text-lg font-semibold">{coverage.activeAssignments}</p></div></div>
+              <div className="flex flex-wrap gap-3 text-sm"><button type="button" className="font-medium text-primary underline" onClick={() => { setClassId(c.id); setSection('Subjects') }}>Review subject offerings</button><button type="button" className="font-medium text-primary underline" onClick={() => { setClassId(c.id); setSection('Teaching') }}>Review teaching coverage</button></div>
+              <section className="space-y-3"><div className="flex items-center justify-between gap-3"><h4 className="font-semibold">Current learner roster</h4><Button variant="outline" onClick={() => setClassEditOpen(open => !open)}>{classEditOpen ? 'Close settings' : 'Class settings'}</Button></div>{roster.length ? <ul className="divide-y rounded-lg border">{roster.map(learner => <li key={learner.id} className="px-3 py-2 text-sm">{String(learner.display_name)}</li>)}</ul> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No learners are currently placed in this class.</p>}</section>
+              {!coverage.offerings && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No subject offerings are configured for this class. <button type="button" className="font-medium text-primary underline" onClick={() => setSection('Subjects')}>Open Subjects</button> to review setup.</p>}
+              {classEditOpen && <div className="max-w-xl">{f('saveClass', 'Save class settings', [{ ...field('code', 'Class code'), value: value(c, 'code') }, { ...field('label', 'Class name'), value: value(c, 'label') }, { ...field('status', 'Status', choices('active', 'closed')), value: value(c, 'status') }], { id: c.id }, 'Academic year and Grade are fixed for this class history.')}</div>}
+            </div>}
+          </div> })}</div>
+        </section> })}
+      </div>}
     </div>}
-    {section === 'Academic Years & Terms' && <div className="space-y-6"><div className="grid md:grid-cols-2 gap-4">
-      {f('saveYear', 'Create academic year', [field('code', 'Year name / code'), date('starts_on', 'Start date'), date('ends_on', 'End date'), { ...field('status', 'Status', choices('draft', 'active', 'closed')), value: 'draft' }])}
-      {f('saveTerm', 'Create term', [field('academic_year_id', 'Academic year', years), field('code', 'Term name / code'), { ...field('ordinal', 'Term number'), type: 'number' }, date('starts_on', 'Start date'), date('ends_on', 'End date')])}
-    </div>{d.academic_years.map(y => <details key={y.id} className="border rounded-lg p-4"><summary className="font-medium cursor-pointer">{String(y.code)} · {period(y)} · {String(y.status)}</summary><div className="grid md:grid-cols-2 gap-4 mt-4">
-      {f('saveYear', 'Save academic year', [{ ...field('code', 'Year name / code'), value: value(y, 'code') }, date('starts_on', 'Start date', value(y, 'starts_on')), date('ends_on', 'End date', value(y, 'ends_on')), { ...field('status', 'Status', choices('draft', 'active', 'closed')), value: value(y, 'status') }], { id: y.id }, 'Date changes must still contain all existing terms, enrolments and assignments.')}
-      {d.terms.filter(t => t.academic_year_id === y.id).sort((a, b) => Number(a.ordinal) - Number(b.ordinal)).map(t => <div key={t.id}>{f('saveTerm', `Save ${t.code}`, [{ ...field('code', 'Term name / code'), value: value(t, 'code') }, { ...field('ordinal', 'Term number'), type: 'number', value: value(t, 'ordinal') }, date('starts_on', 'Start date', value(t, 'starts_on')), date('ends_on', 'End date', value(t, 'ends_on'))], { id: t.id, academic_year_id: y.id })}</div>)}
-    </div></details>)}</div>}
     {section === 'Subjects' && <div className="space-y-6"><div className="grid md:grid-cols-2 gap-4">
       {f('saveSubject', 'Enable school subject', [field('subject_id', 'Catalogue subject', options(d.subject_catalogue.filter(s => s.status === 'active' && !d.school_subjects.some(ss => ss.subject_id === s.id)), s => `${s.curriculum_code} · ${s.name}`)), field('local_code', 'School subject code'), field('display_name', 'School subject name')], { enabled: 'true' })}
       <div className="space-y-3">{picker('Offering class', classId, setClassId, classOptions)}{classId && f('createOffering', 'Create subject offering', [field('school_subject_id', 'Enabled subject', options(d.school_subjects.filter(s => s.enabled && d.subject_grades.some(sg => sg.subject_id === s.subject_id && sg.grade_id === find(d.class_groups, classId)?.grade_id)), s => value(s, 'display_name')))], { class_group_id: classId })}</div>
@@ -131,16 +220,17 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
       <History title="Subject offerings" rows={offerings.map(o => ({ id: o.id, title: offeringName(o.id), detail: String(o.status) }))} />
       <div className="max-w-xl">{f('closeOffering', 'Close offering', [field('id', 'Offering', options(offerings.filter(o => o.status === 'active'), o => offeringName(o.id)))], {}, 'Closing removes the offering from current teaching access and retains its history.')}</div>
     </div>}
-    {section === 'Teacher Assignments' && <div className="space-y-6">
+    {section === 'Teaching' && <div className="space-y-6">
       <History title="School staff" rows={d.staff_profiles.map(s => ({ id: s.id, title: String(s.display_name), detail: `${s.staff_code} · ${s.status}` }))} />
       <div className="max-w-md">{picker('Class filter', classId, setClassId, classOptions)}</div>
       <div className="grid md:grid-cols-2 gap-4">{f('assign', 'Assign teacher', [field('staff_id', 'Teacher', staff), field('offering_id', 'Subject offering', options(offerings.filter(o => o.status === 'active'), o => offeringName(o.id))), date('starts_on', 'First teaching day', d.today), date('ends_on', 'Last teaching day', undefined, true)], {}, 'Staff must have an active Teacher role. Dates are inclusive; an empty end lasts through the academic year.')}</div>
       <History title={`Current teacher assignments · ${d.today}`} rows={d.teacher_assignments.filter(a => current(a) && offerings.some(o => o.id === a.offering_id)).map(a => ({ id: a.id, title: `${value(find(d.staff_profiles, a.staff_id), 'display_name')} · ${offeringName(a.offering_id)}`, detail: period(a) }))} />
       <h3 className="font-semibold">Assignment history and changes</h3>{d.teacher_assignments.filter(a => offerings.some(o => o.id === a.offering_id)).map(a => <details key={`${a.id}-${a.row_version}`} className="border rounded-lg p-4"><summary className="cursor-pointer">{value(find(d.staff_profiles, a.staff_id), 'display_name')} · {offeringName(a.offering_id)} · {period(a)} · {a.status === 'active' && a.ends_on && String(a.ends_on) < d.today ? 'ended' : String(a.status)}</summary>{a.status === 'active' && <div className="grid md:grid-cols-2 gap-4 mt-4">
         {f('endAssignment', 'End assignment', [date('ends_on', 'Last teaching day', d.today)], { assignment_id: a.id }, 'Access continues through this date. Historical assignments remain recorded.')}
-        {f('replaceAssignment', 'Replace teacher', [field('staff_id', 'Replacement teacher', staff.filter(s => s.value !== a.staff_id)), date('starts_on', 'Replacement first day', d.today), date('ends_on', 'Replacement last day', undefined, true)], { assignment_id: a.id }, 'The previous teacher finishes the day before the replacement starts.')}
+        {f('replaceAssignment', 'Replace teacher', [field('staff_id', 'Replacement teacher', staff.filter(s => s.value !== a.staff_id)), date('starts_on', 'Replacement first day', d.today), date('ends_on', 'Replacement last day', undefined, true)], { assignment_id: a.id }, 'The previous teacher finishes the day before the replacement starts. Choose a transfer date after any scheduled subject start dates.')}
       </div>}</details>)}
       <Link href={`/academics?school=${school}`} className="underline">View offering rosters</Link>
     </div>}
+    {section === 'Assessment' && <div className="space-y-6"><p className="text-muted-foreground">School-wide assessment planning remains available through the existing assessment workspace.</p><Link href={`/admin/assessments?school=${school}`} className="underline">Open assessment setup</Link></div>}
   </div>
 }

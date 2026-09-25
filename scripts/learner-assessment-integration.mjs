@@ -8,7 +8,9 @@ import { learnerAssessmentService } from '../lib/domain/learner-assessments.ts'
 import { foundationService } from '../lib/domain/foundation.ts'
 
 const pool=developmentPool(); pool.options.connectionTimeoutMillis=15000; pool.options.query_timeout=120000
-let client, user=id('user-teacher'), fault=false, passed=0
+let client, user=id('user-teacher'), fault=false, passed=0, failStorage=false
+const objects=new Map()
+const storage={upload:async(key,bytes,contentType)=>{if(failStorage)throw Error('storage failure');objects.set(key,{bytes,contentType})},read:async key=>{assert.ok(objects.has(key));return objects.get(key)}}
 try {
   client=await pool.connect(); await client.query('BEGIN'); await client.query("SET LOCAL statement_timeout='60s'")
   const fingerprint=async()=> (await client.query("SELECT md5(string_agg(to_jsonb(a)::text,'' ORDER BY id)) hash FROM assessments a")).rows[0].hash
@@ -33,11 +35,12 @@ try {
     if(fault && sql.includes('INSERT INTO audit_events'))throw new Error('Injected audit failure')
     return client.query(sql,values)
   },release(){}})}
-  const service=learnerAssessmentService(adapter,async()=>user), definitions=assessmentService(adapter,async()=>user), foundation=foundationService(adapter,async()=>user)
+  const service=learnerAssessmentService(adapter,async()=>user,storage), definitions=assessmentService(adapter,async()=>user), foundation=foundationService(adapter,async()=>user)
   const test=async(label,run)=>{await run();passed++;console.log('PASS '+label)}
   let scenarioSequence=0
   const isolation=async(run)=>{const name=`scenario_${++scenarioSequence}`;await client.query(`SAVEPOINT ${name}`);try{await run()}finally{await client.query(`ROLLBACK TO SAVEPOINT ${name}`)}}
   const dbReject=async(sql,values)=>isolation(async()=>{await assert.rejects(async()=>{await client.query(sql,values);await client.query('SET CONSTRAINTS ALL IMMEDIATE')},e=>['23514','23503','23505'].includes(e.code))})
+  const uploadForm=()=>{const d=new FormData();d.set('file',new File(['%PDF-1.7\nevidence'],'work.pdf',{type:'application/pdf'}));d.set('title','Teacher evidence');d.set('description','Captured offline');d.set('category','work');return d}
   const type=(await definitions.readOffering(school,id('offering-math'))).types[0].id
   const input={title:'Synthetic learner result integration',offering_id:id('offering-math'),assessment_type_id:type,tasks:[{title:'Setup',criteria:[{title:'Preparation',indicators:[{descriptor:'Ready',score:'1.10'},{descriptor:'Not demonstrated',score:'0'}]}]},{title:'Capture',criteria:[{title:'Composition',indicators:[{descriptor:'Clear',score:'2.25'},{descriptor:'Partial',score:'1.05'}]}]}],levels:[{code:'A',descriptor:'Secure',lower:'0',upper:'3.35'}]}
   const draft=await definitions.save(school,input), a=await definitions.open(school,draft.id,Number(draft.row_version))
@@ -59,11 +62,52 @@ try {
   const goodAsset=await asset(learner), wrongAsset=await asset(other)
   await test('evidence ownership and task/criterion boundaries enforced',async()=>{for(const e of [{asset_id:wrongAsset},{asset_id:goodAsset,task_id:randomUUID()},{asset_id:goodAsset,task_id:a.tasks[0].id,criterion_id:a.tasks[1].criteria[0].id}])await assert.rejects(service.mutate(school,a.id,learner,'save',Number(saved.participation.row_version),{...partial,evidence:[e]}),/NOT_FOUND|INVALID_INPUT/)})
   await test('existing evidence can be associated, scoped and removed',async()=>{saved=await service.mutate(school,a.id,learner,'save',Number(saved.participation.row_version),{...partial,evidence:[{asset_id:goodAsset,task_id:a.tasks[0].id}]});assert.equal((await service.get(school,a.id,learner)).evidence.length,1);await dbReject('UPDATE media_assets SET archived_at=now() WHERE id=$1',[goodAsset]);saved=await service.mutate(school,a.id,learner,'save',Number(saved.participation.row_version),partial);assert.equal((await service.get(school,a.id,learner)).evidence.length,0)})
-  await test('audit failure rolls back completion, feedback and evidence',async()=>{fault=true;try{await assert.rejects(service.mutate(school,a.id,learner,'complete',Number(saved.participation.row_version),{...full,evidence:[{asset_id:goodAsset}]}),/Injected/)}finally{fault=false}const read=await service.get(school,a.id,learner);assert.equal(read.participation.row_version,saved.participation.row_version);assert.equal(read.participation.status,'in_progress');assert.equal(read.evidence.length,0)})
-  await test('complete derives authoritative total/performance, audit and next',async()=>{saved=await service.mutate(school,a.id,learner,'complete',Number(saved.participation.row_version),{...full,evidence:[{asset_id:goodAsset}]});assert.equal(saved.result.score,'3.35');assert.equal(saved.result.performance.code,'A');assert.equal(saved.next,other);const read=await service.get(school,a.id,learner);assert.ok(read.participation.completed_at);assert.ok(read.participation.completed_by_actor_id);assert.equal(read.result.score,'3.35');const events=(await client.query("SELECT safe_changes FROM audit_events WHERE resource_id=$1 AND event_type='learner_assessment.completed'",[saved.participation.id])).rows;assert.equal(events.length,1);assert.ok(!JSON.stringify(events).includes('Synthetic feedback'))})
+  let uploaded
+  await test('authorized teacher can upload private evidence for accessible learner assessment',async()=>{
+    const before=objects.size
+    uploaded=await service.uploadEvidence(school,a.id,learner,uploadForm())
+    const row=(await client.query('SELECT * FROM media_assets WHERE school_id=$1 AND id=$2',[school,uploaded.id])).rows[0]
+    assert.equal(row.learner_id,learner); assert.equal(row.title,'Teacher evidence'); assert.equal(row.state,'ready')
+    assert.equal(row.uploaded_by_actor_id,id('actor-teacher')); assert.ok(objects.has(row.object_key)); assert.equal(objects.size,before+1)
+    assert.ok(row.object_key.startsWith(`schools/${school}/assets/`)); assert.equal(uploaded.title,'Teacher evidence')
+  })
+  await test('uploaded evidence attaches to learner/assessment and optional task or criterion',async()=>{
+    saved=await service.mutate(school,a.id,learner,'save',Number(saved.participation.row_version),{...partial,evidence:[{asset_id:uploaded.id,task_id:a.tasks[0].id,criterion_id:a.tasks[0].criteria[0].id}]})
+    const links=(await service.get(school,a.id,learner)).evidence
+    assert.equal(links.length,1); assert.equal(links[0].asset_id,uploaded.id); assert.equal(links[0].task_id,a.tasks[0].id); assert.equal(links[0].criterion_id,a.tasks[0].criteria[0].id)
+    assert.ok((await service.get(school,a.id,learner)).assets.some(f=>f.id===uploaded.id))
+  })
+  await test('invalid upload is rejected without creating ready metadata or objects',async()=>{
+    const before=objects.size, ready=(await client.query("SELECT count(*)::int n FROM media_assets WHERE school_id=$1 AND learner_id=$2 AND state='ready'",[school,learner])).rows[0].n
+    await assert.rejects(service.uploadEvidence(school,a.id,learner,new FormData()),/INVALID_INPUT/)
+    assert.equal(objects.size,before)
+    assert.equal((await client.query("SELECT count(*)::int n FROM media_assets WHERE school_id=$1 AND learner_id=$2 AND state='ready'",[school,learner])).rows[0].n,ready)
+  })
+  await test('storage failure does not leave a ready learner file',async()=>{
+    const before=(await client.query("SELECT count(*)::int n FROM media_assets WHERE school_id=$1 AND learner_id=$2 AND state='ready'",[school,learner])).rows[0].n
+    failStorage=true
+    try{await assert.rejects(service.uploadEvidence(school,a.id,learner,uploadForm()),/Upload failed/)}finally{failStorage=false}
+    assert.equal((await client.query("SELECT count(*)::int n FROM media_assets WHERE school_id=$1 AND learner_id=$2 AND state='ready'",[school,learner])).rows[0].n,before)
+    assert.ok((await client.query("SELECT id FROM media_assets WHERE school_id=$1 AND learner_id=$2 AND state='failed'",[school,learner])).rowCount)
+  })
+  await test('unauthorized, cross-school and invalid learner/assessment uploads rejected',async()=>{
+    try{
+      for(const who of [null,id('user-moderator'),id('user-admin')]){user=who;await assert.rejects(service.uploadEvidence(school,a.id,learner,uploadForm()),/FORBIDDEN|UNAUTHORIZED/)}
+    }finally{user=id('user-teacher')}
+    await assert.rejects(service.uploadEvidence(school,a.id,randomUUID(),uploadForm()),/NOT_FOUND/)
+    await assert.rejects(service.uploadEvidence(school,randomUUID(),learner,uploadForm()),/NOT_FOUND/)
+    await assert.rejects(service.uploadEvidence(randomUUID(),a.id,learner,uploadForm()),/FORBIDDEN/)
+  })
+  await test('revoked assignment cannot upload evidence',()=>isolation(async()=>{
+    await client.query("UPDATE teacher_assignments SET status='revoked' WHERE school_id=$1 AND offering_id=$2",[school,a.offering_id])
+    await assert.rejects(service.uploadEvidence(school,a.id,learner,uploadForm()),/FORBIDDEN/)
+  }))
+  await test('audit failure rolls back completion, feedback and evidence',async()=>{fault=true;try{await assert.rejects(service.mutate(school,a.id,learner,'complete',Number(saved.participation.row_version),{...full,evidence:[{asset_id:goodAsset}]}),/Injected/)}finally{fault=false}const read=await service.get(school,a.id,learner);assert.equal(read.participation.row_version,saved.participation.row_version);assert.equal(read.participation.status,'in_progress');assert.equal(read.evidence.length,1)})
+  await test('complete derives authoritative total/performance, audit and next',async()=>{saved=await service.mutate(school,a.id,learner,'complete',Number(saved.participation.row_version),{...full,evidence:[{asset_id:goodAsset},{asset_id:uploaded.id,criterion_id:a.tasks[0].criteria[0].id}]});assert.equal(saved.result.score,'3.35');assert.equal(saved.result.performance.code,'A');assert.equal(saved.next,other);const read=await service.get(school,a.id,learner);assert.ok(read.participation.completed_at);assert.ok(read.participation.completed_by_actor_id);assert.equal(read.result.score,'3.35');const events=(await client.query("SELECT safe_changes FROM audit_events WHERE resource_id=$1 AND event_type='learner_assessment.completed'",[saved.participation.id])).rows;assert.equal(events.length,1);assert.ok(!JSON.stringify(events).includes('Synthetic feedback'))})
   await test('completed result rejects all service mutations and stale saves',async()=>{for(const command of ['save','complete','absent','begin'])await assert.rejects(service.mutate(school,a.id,learner,command,Number(saved.participation.row_version),full),/CONFLICT/);await assert.rejects(service.mutate(school,a.id,learner,'save',1,partial),/CONFLICT/)})
+  await test('completed assessment cannot receive new evidence uploads',()=>assert.rejects(service.uploadEvidence(school,a.id,learner,uploadForm()),/CONFLICT/))
   await test('completed parent, observations, evidence and asset protected directly',async()=>{for(const [sql,values] of [['UPDATE learner_assessments SET feedback=\'attack\' WHERE id=$1',[saved.participation.id]],['DELETE FROM learner_assessments WHERE id=$1',[saved.participation.id]],['DELETE FROM criterion_observations WHERE learner_assessment_id=$1',[saved.participation.id]],['DELETE FROM assessment_evidence WHERE learner_assessment_id=$1',[saved.participation.id]],['UPDATE media_assets SET archived_at=now() WHERE id=$1',[goodAsset]],['UPDATE media_assets SET learner_id=$2 WHERE id=$1',[goodAsset,other]]])await dbReject(sql,values)})
-  await test('absence has no score; explicit begin reuses identity and is audited',async()=>{const absent=await service.mutate(school,a.id,other,'absent',0);assert.equal((await service.get(school,a.id,other)).result.score,null);await assert.rejects(service.mutate(school,a.id,other,'save',Number(absent.participation.row_version),full),/CONFLICT/);const begun=await service.mutate(school,a.id,other,'begin',Number(absent.participation.row_version));assert.equal(begun.participation.id,absent.participation.id);assert.equal(begun.participation.status,'in_progress');assert.equal(begun.participation.absent_at,null);assert.equal((await client.query("SELECT count(*)::int n FROM audit_events WHERE resource_id=$1 AND event_type='learner_assessment.begun'",[begun.participation.id])).rows[0].n,1)})
+  await test('absence has no score; explicit begin reuses identity and is audited',async()=>{const absent=await service.mutate(school,a.id,other,'absent',0);assert.equal((await service.get(school,a.id,other)).result.score,null);await assert.rejects(service.uploadEvidence(school,a.id,other,uploadForm()),/CONFLICT/);await assert.rejects(service.mutate(school,a.id,other,'save',Number(absent.participation.row_version),full),/CONFLICT/);const begun=await service.mutate(school,a.id,other,'begin',Number(absent.participation.row_version));assert.equal(begun.participation.id,absent.participation.id);assert.equal(begun.participation.status,'in_progress');assert.equal(begun.participation.absent_at,null);assert.equal((await client.query("SELECT count(*)::int n FROM audit_events WHERE resource_id=$1 AND event_type='learner_assessment.begun'",[begun.participation.id])).rows[0].n,1)})
   await test('absence versus stale save yields controlled conflict',async()=>{await service.mutate(school,a.id,third,'absent',0);await assert.rejects(service.mutate(school,a.id,third,'save',0,full),/CONFLICT/)})
   await test('no-scale assessment completes without fabricated descriptor',async()=>{const d=await definitions.save(school,{...input,levels:[]}),open=await definitions.open(school,d.id,Number(d.row_version));const result=await service.mutate(school,open.id,learner,'complete',0,{...full,evidence:[],observations:open.tasks.flatMap(t=>t.criteria.map(c=>({criterion_id:c.id,indicator_id:c.indicators[0].id})))});assert.equal(result.result.performance,null)})
   await test('anonymous, moderator and admin-only cannot enter results',async()=>{try{for(const who of [null,id('user-moderator'),id('user-admin')]){user=who;await assert.rejects(service.roster(school,a.id),/FORBIDDEN|UNAUTHORIZED/);await assert.rejects(service.mutate(school,a.id,learner,'save',0,partial),/FORBIDDEN|UNAUTHORIZED/)}}finally{user=id('user-teacher')}})
@@ -87,6 +131,8 @@ try {
     await assert.rejects(service.roster(school,foreignAssessment),/NOT_FOUND/)
     await assert.rejects(service.roster(foreignSchool,foreignAssessment),/FORBIDDEN/)
     await assert.rejects(service.get(school,a.id,foreignLearner),/NOT_FOUND/)
+    await assert.rejects(service.uploadEvidence(school,a.id,foreignLearner,uploadForm()),/NOT_FOUND/)
+    await assert.rejects(service.uploadEvidence(foreignSchool,foreignAssessment,foreignLearner,uploadForm()),/FORBIDDEN/)
     const current=await service.get(school,a.id,other)
     await assert.rejects(service.mutate(school,a.id,other,'save',Number(current.participation.row_version),{...full,evidence:[{asset_id:foreignAsset}]}),/NOT_FOUND/)
     await dbReject('INSERT INTO learner_assessments(school_id,assessment_id,learner_id,created_by_actor_id,updated_by_actor_id) VALUES($1,$2,$3,$4,$4)',[school,a.id,foreignLearner,id('bootstrap')])
@@ -110,5 +156,5 @@ try {
     try{await assert.rejects(service.mutate(school,a.id,other,'absent',Number(before.participation.row_version)),/Injected/)}finally{fault=false}
     assert.deepEqual((await service.get(school,a.id,other)).participation,before.participation)
   })
-  console.log(`Learner assessment integration PASS: ${passed} checks; all fixtures rolled back; no object-storage calls`)
+  console.log(`Learner assessment integration PASS: ${passed} checks; all fixtures rolled back; in-memory storage only`)
 }catch(error){safeFailure(error)}finally{if(client){await client.query('ROLLBACK');client.release()}await pool.end()}

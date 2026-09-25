@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { academicHref, academicNavigation, currentPeriodLabel, selectSchool } from '../../lib/academic-navigation'
+import { academicHref, academicNavigation, currentPeriodLabel, selectSchool, termPresentationState } from '../../lib/academic-navigation'
 
 const schools = [{ id: 'school-a', name: 'A' }, { id: 'school-b', name: 'B' }]
 describe('academic navigation and context', () => {
@@ -31,20 +31,47 @@ describe('academic navigation and context', () => {
       { label: 'Private Files', href: '/files?school=school-a' },
     ])
   })
-  it('preserves admin workflows without claiming the admin teaches every class', () => {
+  it('uses the School Admin dashboard and academic shell for school administrators', () => {
+    expect(academicNavigation({ canTeach: false, canManage: true }, 'school-a').map(i => i.label)).toEqual([
+      'Dashboard', 'Academics', 'Staff', 'Learners', 'Files', 'Settings',
+    ])
     expect(academicNavigation({ canTeach: false, canManage: true }, 'school-a').map(i => i.href)).toEqual([
-      '/?school=school-a', '/admin/academics?school=school-a', '/admin/assessments?school=school-a', '/files?school=school-a',
+      '/admin?school=school-a', '/admin/academics?school=school-a', '/admin/staff?school=school-a', '/admin/learners?school=school-a', '/files?school=school-a', '/admin/settings?school=school-a',
     ])
   })
-  it('supports staff with both capabilities', () => {
-    expect(academicNavigation({ canTeach: true, canManage: true }).map(i => i.label)).toEqual(['Overview', 'My Teaching', 'School Administration', 'Assessment Setup', 'Private Files'])
+  it('preserves teacher access without adding teaching workspaces to the admin shell', () => {
+    expect(academicNavigation({ canTeach: true, canManage: true }).map(i => i.label)).toEqual(['Dashboard', 'Academics', 'Staff', 'Learners', 'Files', 'Settings'])
   })
   it('does not offer protected workspaces without capabilities', () => {
     for (const capabilities of [null, { canTeach: false, canManage: false }]) expect(academicNavigation(capabilities)).toEqual([{ label: 'Home', href: '/' }])
   })
-  it('distinguishes missing, current and ambiguous periods without choosing one', () => {
-    expect(currentPeriodLabel([], 'term')).toBe('No current term')
-    expect(currentPeriodLabel([{ code: 'Term 3' }], 'term')).toBe('Term 3')
-    expect(currentPeriodLabel([{ code: 'Year A' }, { code: 'Year B' }], 'year')).toContain('Multiple current years: Year A, Year B')
+  it('derives the current term from the date range instead of raw term count', () => {
+    const terms = [
+      { code: 'Term 1', starts_on: '2026-01-01', ends_on: '2026-04-30' },
+      { code: 'Term 2', starts_on: '2026-05-01', ends_on: '2026-08-31' },
+      { code: 'Term 3', starts_on: '2026-09-01', ends_on: '2026-12-31' },
+    ]
+    expect(currentPeriodLabel(terms, 'term', '2026-09-25')).toBe('Term 3')
+    expect(currentPeriodLabel(terms, 'term', '2026-05-15')).toBe('Term 2')
+  })
+  it('does not warn merely because multiple valid terms exist in the same year', () => {
+    const terms = [
+      { code: 'Term 1', starts_on: '2026-01-01', ends_on: '2026-04-30' },
+      { code: 'Term 2', starts_on: '2026-05-01', ends_on: '2026-08-31' },
+      { code: 'Term 3', starts_on: '2026-09-01', ends_on: '2026-12-31' },
+    ]
+    expect(currentPeriodLabel(terms, 'term', '2026-09-25')).not.toContain('More than one')
+  })
+  it('derives date-based presentation state without persisting a current flag', () => {
+    const today = '2026-09-25'
+    expect(currentPeriodLabel([{ code: 'Term 1', starts_on: '2026-01-01', ends_on: '2026-04-30' }], 'term', today)).toBe('No current term')
+    expect(currentPeriodLabel([{ code: 'Term 3', starts_on: '2026-09-01', ends_on: '2026-12-31' }], 'term', today)).toBe('Term 3')
+    expect(currentPeriodLabel([{ code: 'Term 4', starts_on: '2026-12-01', ends_on: '2026-12-31' }], 'term', today)).toBe('No current term')
+  })
+  it('classifies term state strictly from dates, including gaps between terms', () => {
+    expect(termPresentationState({ starts_on: '2026-01-01', ends_on: '2026-04-30' }, '2026-02-15')).toBe('current')
+    expect(termPresentationState({ starts_on: '2026-05-01', ends_on: '2026-08-31' }, '2026-09-25')).toBe('past')
+    expect(termPresentationState({ starts_on: '2026-09-01', ends_on: '2026-12-31' }, '2026-09-25')).toBe('current')
+    expect(termPresentationState({ starts_on: '2026-12-01', ends_on: '2026-12-31' }, '2026-09-25')).toBe('upcoming')
   })
 })

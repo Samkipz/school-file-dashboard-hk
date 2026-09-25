@@ -5,10 +5,11 @@ import { DefinitionError } from './scoring-guide.ts'
 import { loadLevels } from './scoring-persistence.ts'
 import type { AssessmentDraft } from './assessments.ts'
 import { calculateResult, requireComplete, requireTransition, resultInput, nextLearner, type Observation, type EvidenceInput, type ResultStatus } from './learner-result.ts'
+import { fileService, type PrivateStorage } from './files.ts'
 
 type Participation = { id: string; learner_id: string; row_version: string; status: ResultStatus; feedback: string | null; completed_at: string | null; completed_by_actor_id: string | null; absent_at: string | null }
 type Evidence = EvidenceInput & { id: string; title: string; available: boolean }
-export function learnerAssessmentService(pool: Pool, identify: () => Promise<string | null>) {
+export function learnerAssessmentService(pool: Pool, identify: () => Promise<string | null>, storage?: PrivateStorage) {
   const access = foundationService(pool, identify)
   async function definition(db: PoolClient, ctx: Context, assessment: string) {
     const a = (await db.query<AssessmentDraft & { term_code: string | null }>('SELECT a.*,t.code AS term_code FROM assessments a LEFT JOIN terms t ON t.school_id=a.school_id AND t.id=a.term_id WHERE a.school_id=$1 AND a.id=$2 AND a.archived_at IS NULL', [ctx.school_id, uuidInput(assessment)])).rows[0]
@@ -102,6 +103,19 @@ export function learnerAssessmentService(pool: Pool, identify: () => Promise<str
           [school,ctx.actor_id,ctx.membership_id,`learner_assessment.${command === 'complete' ? 'completed' : command === 'absent' ? 'absent' : command === 'begin' ? 'begun' : 'saved'}`,row.id,randomUUID(),JSON.stringify({ assessment_id: assessment,learner_id: learner,from_status: previous,to_status: saved.status,row_version: saved.row_version,observed_count: input?.observations.length ?? 0,feedback_present: Boolean(saved.feedback),evidence_added: input?.evidence.filter(e => !priorEvidence.some(p => p.asset_id === e.asset_id)).map(e => e.asset_id) ?? [],evidence_removed: input ? priorEvidence.filter(p => !input.evidence.some(e => e.asset_id === p.asset_id)).map(e => e.asset_id) : [] })])
         return { participation: saved, result: calculated, next: command === 'complete' ? nextLearner(roster, learner) : null }
       })
+    },
+    // Assessment-scoped composition only. Does not widen general Private Files upload.
+    uploadEvidence(school: string, assessment: string, learner: string, form: FormData) {
+      if (!storage) throw new Error('Evidence upload storage is not configured')
+      uuidInput(assessment); uuidInput(learner)
+      const files = fileService(pool, identify, storage, async (client, context) => {
+        if (!context.roles.includes('teacher')) throw new DomainError('FORBIDDEN')
+        const a = await definition(client, context, assessment)
+        await eligible(client, context, a, learner)
+        const row = (await client.query<{ status: string }>('SELECT status FROM learner_assessments WHERE school_id=$1 AND assessment_id=$2 AND learner_id=$3', [context.school_id, assessment, learner])).rows[0]
+        if (row?.status === 'completed' || row?.status === 'absent') throw new DomainError('CONFLICT')
+      })
+      return files.upload(school, { learnerId: learner }, form)
     },
   }
 }

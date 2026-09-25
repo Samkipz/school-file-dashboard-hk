@@ -1,6 +1,24 @@
 # Learner assessment implementation
 
+## Teacher evidence upload extension (2026-09-23)
+
+The teacher learner-assessment screen now supports uploading an existing photo or file from the connected device. The current assessment and learner remain authoritative context: the upload action rechecks the authenticated teacher's current offering assignment and learner roster eligibility, stores the object through the existing private learner-owned media asset service, and returns the new asset to the assessment editor. The teacher reviews the attachment and may scope it to the whole assessment, task or criterion before the existing Save/Complete transaction creates or updates the `assessment_evidence` link.
+
+No database migration was needed. Existing `media_assets`, `assessment_evidence`, learner-result guards and private download route are reused. Uploads are validated by the existing file policy (supported type/signature, metadata limits and 10 MiB limit), remain school- and learner-scoped, and use private R2 keys. Completed learner assessments remain read-only; the upload control is unavailable and the server rejects uploads after completion. Storage failures leave no ready asset; the existing failed-record reconciliation path records the reserved metadata safely. Uploading does not silently complete or save an assessment.
+
+Changed application surfaces: `app/actions/learner-assessments.ts`, `components/learner-assessment.tsx`, `lib/domain/learner-assessments.ts` and `lib/domain/server.ts`. Focused action tests and the learner-assessment integration script cover successful upload/linking, task/criterion scope, unauthorized and cross-school access, invalid combinations/files, storage failure, completed-result locking and existing evidence behavior. Browser verification of the new upload journey remains pending until a local server and development fixtures are available.
+
 Authorized September 21, 2026. Final verification state recorded September 21, 2026. This record does not claim independent review, human acceptance, production readiness or KNEC compliance.
+
+## Verification follow-up (2026-09-23)
+
+The verification environment was restored by identifying and stopping only stale learner verification runners; the long-lived SchoolHub `next dev` process and editor services were left running. Independent database probes confirmed connection acquisition, `SELECT`, transaction begin/rollback, release and pool shutdown. The prior apparent integration hang was caused by stale runner/terminal buffering rather than a database or application assertion defect.
+
+The learner integration suite then terminated normally: `Learner assessment integration PASS: 35 checks; all fixtures rolled back; in-memory storage only`. This includes the new authorized upload, task/criterion linking, invalid upload, storage failure, unauthorized/cross-school/invalid relationship rejection, completed-result locking and existing evidence cases. The repository browser smoke runner still failed independently with `Timed out: assessment list`; its failure screenshot showed the authenticated subject Overview page still rendering, so that scripted navigation result remains inconclusive.
+
+Manual authenticated browser verification using the real Better Auth session completed the missing journey against retained development fixtures. Desktop covered file chooser upload, upload status, evidence scope, Save In Progress, leaving/reopening, persisted evidence, completion and disabled post-completion controls. Mobile covered the same core flow at 390px, including no horizontal overflow, file chooser, evidence controls, save, completion confirmation and read-only blocking. The UI states: `Upload a photo or file ... Save to keep attachments with this assessment` and `Evidence uploaded. Review the attachment and save to keep it with this assessment.`
+
+Full Vitest passed with 18 files and 165 tests. Typecheck and production build passed. Lint passed after escaping one new JSX apostrophe in `components/learner-assessment.tsx`, with nine unrelated existing warnings. `git diff --check` passed. The manual run intentionally retained two synthetic completed learner results and two ready R2 JPEG objects for the existing verification fixture; no cleanup was performed because they are attributable and the fixture is retained by repository convention. No migration or schema change occurred.
 
 ## Scope and domain
 
@@ -57,8 +75,8 @@ Final verification is complete for checks that reached a definitive result. Earl
 | Admin browser regression | PASS: summary journey covering six tabs, lifecycle/history, rollover, validation, mobile layout and assessment setup. |
 | Legacy assessment browser regression | PASS: retained synthetic draft; create/reload/edit/reorder, stale conflict, concurrent transactions, role/foreign/anonymous denial and 390px form coverage. |
 | Structured-assessment browser regression | INCOMPLETE: first final-server attempt was throttled (HTTP 429); clean retry timed out waiting for the Assessments destination. No assertion or throttling was changed. |
-| Learner assessment browser journey against final production build | PASS: full teacher -> My Teaching -> authorized offering -> Assessments -> Open assessment -> roster -> learner -> partial observations -> Save -> refresh/persistence -> finish -> feedback -> existing-file association -> Complete & Next -> exact score -> descriptor -> Completed/read-only -> next learner -> Mark absent -> no zero -> Begin assessment -> In progress path. Also covered forged URLs, cross-school/unauthorized offering denial, stale save, competing first save, absence/save concurrency, stale save after completion, 390px layout and real concurrent writes. Synthetic result/audit records were intentionally retained. |
-| Learner assessment integration | PASS: 28 checks; all fixtures rolled back; no object-storage calls. |
+| Learner assessment browser journey against final production build | PASS manual authenticated journey: real Better Auth teacher session, assigned subject, assessment roster, learner upload, task/criterion scope, Save In Progress, leave/reopen persistence, completion, read-only blocking and 390px mobile flow. Repository smoke script remains INCONCLUSIVE because its assessment-list navigation timed out on the dev server before its first checkpoint. |
+| Learner assessment integration | PASS: 35 checks; all fixtures rolled back; in-memory storage only. |
 | Structured assessment integration | PASS: 19 checks; all mutations rolled back. |
 | Legacy assessment integration | PASS: 158 checks; all fixture mutations and audit events rolled back. |
 | Foundation integration | PASS: 59 checks; all fixtures/mutations rolled back. |
