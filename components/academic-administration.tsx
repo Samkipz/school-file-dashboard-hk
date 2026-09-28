@@ -10,21 +10,23 @@ import { classCoverage, currentClassRoster, groupClassesByGrade } from '@/lib/do
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog'
 
 type Option = { value: string; label: string }
 type Field = { name: string; label: string; type?: string; options?: Option[]; value?: string; optional?: boolean }
+type CalendarForm = { type: 'create-year' } | { type: 'create-term'; yearId: string } | { type: 'edit-year'; yearId: string } | { type: 'edit-term'; termId: string }
+type ClassForm = { type: 'create' } | { type: 'edit'; classId: string }
 const choices = (...values: string[]): Option[] => values.map(value => ({ value, label: value[0].toUpperCase() + value.slice(1) }))
 const value = (row: AdminRow | undefined, key: string) => String(row?.[key] ?? '')
 const options = (rows: AdminRow[], label: (r: AdminRow) => string): Option[] => rows.map(r => ({ value: r.id, label: label(r) }))
 const field = (name: string, label: string, opts?: Option[]): Field => ({ name, label, options: opts })
 const date = (name: string, label: string, initial?: string, optional = false): Field => ({ name, label, type: 'date', value: initial, optional })
 
-function WorkflowForm({ school, operation, title, fields, hidden = {}, hint }: { school: string; operation: string; title: string; fields: Field[]; hidden?: Record<string, string>; hint?: string }) {
+function WorkflowForm({ school, operation, title, fields, hidden = {}, hint, embedded = false }: { school: string; operation: string; title: string; fields: Field[]; hidden?: Record<string, string>; hint?: string; embedded?: boolean }) {
   const [state, action, pending] = useActionState(administer.bind(null, school, operation), { ok: false, message: '' })
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.name, f.value ?? ''])))
   const id = useId()
-  return <Card><CardHeader><CardTitle>{title}</CardTitle>{hint && <p className="text-muted-foreground">{hint}</p>}</CardHeader><CardContent>
-    <form action={action} className="space-y-4">
+  const form = <form action={action} className="space-y-4">
       {Object.entries(hidden).map(([name, v]) => <input key={name} name={name} value={v} type="hidden" />)}
       <fieldset disabled={pending} className="space-y-4">
         {fields.map(f => <div key={f.name} className="space-y-1"><label className="text-sm font-medium" htmlFor={`${id}-${f.name}`}>{f.label}{f.optional ? ' (optional)' : ''}</label>
@@ -35,6 +37,9 @@ function WorkflowForm({ school, operation, title, fields, hidden = {}, hint }: {
       </fieldset>
       {state.message && <p role={state.ok ? 'status' : 'alert'} className={state.ok ? 'text-sm text-green-700 dark:text-green-400' : 'text-sm text-destructive'}>{state.message}{state.ok && operation === 'transfer' ? ' Review subjects for the new class below.' : ''}</p>}
     </form>
+  if (embedded) return <div className="space-y-4">{hint && <p className="text-sm text-muted-foreground">{hint}</p>}{form}</div>
+  return <Card><CardHeader><CardTitle>{title}</CardTitle>{hint && <p className="text-muted-foreground">{hint}</p>}</CardHeader><CardContent>
+    {form}
   </CardContent></Card>
 }
 function History({ title, rows }: { title: string; rows: { id: string; title: string; detail: string }[] }) {
@@ -58,14 +63,9 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
   const [classId, setClassId] = useState('')
   const [enrolmentId, setEnrolmentId] = useState('')
   const [placementId, setPlacementId] = useState('')
-  const [yearCreateOpen, setYearCreateOpen] = useState(false)
-  const [yearEditId, setYearEditId] = useState<string | null>(null)
-  const [termEditId, setTermEditId] = useState<string | null>(null)
-  const [termCreateOpen, setTermCreateOpen] = useState(false)
-  const [termCreateYearId, setTermCreateYearId] = useState(d.academic_years.find(y => y.status === 'active')?.id ?? d.academic_years[0]?.id ?? '')
-  const [classCreateOpen, setClassCreateOpen] = useState(false)
+  const [calendarForm, setCalendarForm] = useState<CalendarForm | null>(null)
+  const [classForm, setClassForm] = useState<ClassForm | null>(null)
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
-  const [classEditOpen, setClassEditOpen] = useState(false)
   const find = (rows: AdminRow[], id: unknown) => rows.find(r => r.id === id)
   const yearName = (id: unknown) => value(find(d.academic_years, id), 'code')
   const className = (id: unknown) => value(find(d.class_groups, id), 'label')
@@ -87,7 +87,7 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
   const placements = d.class_placements.filter(p => enrolments.some(e => e.id === p.enrolment_id))
   const placement = find(placements, placementId)
   const subjectEnrolments = d.learner_subject_enrolments.filter(s => enrolments.some(e => e.id === s.enrolment_id))
-  const f = (operation: string, title: string, fields: Field[], hidden: Record<string, string> = {}, hint?: string) => <WorkflowForm school={school} operation={operation} title={title} fields={fields} hidden={hidden} hint={hint} />
+  const f = (operation: string, title: string, fields: Field[], hidden: Record<string, string> = {}, hint?: string, embedded = false) => <WorkflowForm school={school} operation={operation} title={title} fields={fields} hidden={hidden} hint={hint} embedded={embedded} />
   const picker = (label: string, selected: string, change: (s: string) => void, opts: Option[]) => <label className="block space-y-1"><span className="text-sm font-medium">{label}</span><select className="block w-full border rounded-md h-10 px-3 bg-background" value={selected} onChange={e => change(e.target.value)}><option value="">Select {label.toLowerCase()}</option>{opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
   const currentYear = useMemo(() => d.academic_years.find(y => y.status === 'active' && String(y.starts_on) <= d.today && (!y.ends_on || String(y.ends_on) >= d.today)) ?? d.academic_years.find(y => y.status === 'active') ?? d.academic_years[0], [d.academic_years, d.today])
   const currentTerm = useMemo(() => {
@@ -96,17 +96,26 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
     return yearTerms.find(t => String(t.starts_on) <= d.today && (!t.ends_on || String(t.ends_on) >= d.today)) ?? undefined
   }, [currentYear, d.terms, d.today])
   const otherYears = d.academic_years.filter(y => y.id !== currentYear?.id)
-  const renderYearEditor = (year: AdminRow, compact = false) => {
+  const calendarFormYearId = calendarForm?.type === 'edit-year' ? calendarForm.yearId : calendarForm?.type === 'create-term' ? calendarForm.yearId : ''
+  const calendarFormYear = find(d.academic_years, calendarFormYearId)
+  const calendarFormTerm = calendarForm?.type === 'edit-term' ? find(d.terms, calendarForm.termId) : undefined
+  const viewedClass = find(d.class_groups, selectedClassId)
+  const viewedGrade = viewedClass ? find(d.grades, viewedClass.grade_id) : undefined
+  const viewedRoster = viewedClass ? currentClassRoster(d, viewedClass.id) : []
+  const viewedCoverage = viewedClass ? classCoverage(d, viewedClass.id) : { offerings: 0, activeAssignments: 0 }
+  const calendarDialogTitle = calendarForm?.type === 'create-year' ? 'Create academic year' : calendarForm?.type === 'create-term' ? 'Add term' : calendarForm?.type === 'edit-year' ? 'Edit academic year' : 'Edit term'
+  const calendarDialogDescription = calendarForm?.type === 'edit-year' ? 'Update the academic year dates and status.' : calendarForm?.type === 'edit-term' ? 'Update the term code, dates, or ordinal.' : calendarForm?.type === 'create-term' ? 'Add a term to the current academic year.' : 'Set the code, date range, and status for the new academic year.'
+  const renderYearEditor = (year: AdminRow) => {
     const fields = [{ ...field('code', 'Code'), value: value(year, 'code') }, date('starts_on', 'Start date', value(year, 'starts_on')), date('ends_on', 'End date', value(year, 'ends_on')), { ...field('status', 'Status', choices('draft', 'active', 'closed')), value: value(year, 'status') }]
     return <div className="space-y-4">
-      {f('saveYear', compact ? 'Edit year' : 'Save academic year', fields, { id: year.id }, 'Date changes must still contain all existing terms, enrolments and assignments.')}
+      {f('saveYear', 'Save academic year', fields, { id: year.id }, 'Date changes must still contain all existing terms, enrolments and assignments.', true)}
     </div>
   }
-  const renderTermEditor = (term: AdminRow, compact = false) => {
+  const renderTermEditor = (term: AdminRow) => {
     const fields = [{ ...field('code', 'Code'), value: value(term, 'code') }, { ...field('ordinal', 'Ordinal'), type: 'number', value: value(term, 'ordinal') }, date('starts_on', 'Start date', value(term, 'starts_on')), date('ends_on', 'End date', value(term, 'ends_on'))]
-    return <div className="space-y-4">{f('saveTerm', compact ? 'Edit term' : 'Save term', fields, { id: String(term.id), academic_year_id: String(term.academic_year_id) }, 'Terms are date-based and cannot include a current-term selector.')}</div>
+    return <div className="space-y-4">{f('saveTerm', 'Save term', fields, { id: String(term.id), academic_year_id: String(term.academic_year_id) }, 'Terms are date-based and cannot include a current-term selector.', true)}</div>
   }
-  const renderCreateTerm = (year: AdminRow) => <div className="space-y-4">{f('saveTerm', 'Add term', [field('academic_year_id', 'Academic year', years), field('code', 'Code'), { ...field('ordinal', 'Ordinal'), type: 'number' }, date('starts_on', 'Start date'), date('ends_on', 'End date')], { academic_year_id: year.id }, 'Add a valid term within the selected academic year.')}</div>
+  const renderCreateTerm = (year: AdminRow) => <div className="space-y-4">{f('saveTerm', 'Add term', [field('code', 'Code'), { ...field('ordinal', 'Ordinal'), type: 'number' }, date('starts_on', 'Start date'), date('ends_on', 'End date')], { academic_year_id: year.id }, `Add a valid term within academic year ${String(year.code)}.`, true)}</div>
   return <div className="space-y-6">
     <header className="space-y-3">
       <p className="text-sm font-medium text-primary">Academics</p>
@@ -118,20 +127,18 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
     </header>
 
     <nav aria-label="Academic administration sections" className="flex flex-wrap gap-2 border-b border-border pb-2">
-      {sections.map(s => <button key={s} type="button" onClick={() => setSection(s)} aria-pressed={section === s} className={`min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${section === s ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>{s}</button>)}
+      {sections.map(s => <button key={s} type="button" onClick={() => { setCalendarForm(null); setClassForm(null); setSelectedClassId(null); setSection(s) }} aria-pressed={section === s} className={`min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${section === s ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>{s}</button>)}
     </nav>
-    {section !== 'Year-End' && section !== 'Assessment' && <div className="max-w-md">{picker('Academic year filter', yearId, v => { setYearId(v); setClassId(''); setSelectedClassId(null); setClassEditOpen(false) }, options(d.academic_years, r => value(r, 'code')))}</div>}
+    {section !== 'Year-End' && section !== 'Assessment' && <div className="max-w-md">{picker('Academic year filter', yearId, v => { setYearId(v); setClassId(''); setSelectedClassId(null); setClassForm(null) }, options(d.academic_years, r => value(r, 'code')))}</div>}
     {section === 'Year-End' && <AcademicRollover school={school} data={d} />}
     {section === 'Calendar' && <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">Overview-first school calendar</div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setYearCreateOpen(v => !v)}>{yearCreateOpen ? 'Close' : '+ Add academic year'}</Button>
-          {currentYear && <Button onClick={() => { setTermCreateYearId(currentYear.id); setTermCreateOpen(v => !v) }}>{termCreateOpen ? 'Close' : '+ Add term'}</Button>}
+          <Button variant="outline" onClick={() => setCalendarForm({ type: 'create-year' })}>+ Add academic year</Button>
+          {currentYear && <Button onClick={() => setCalendarForm({ type: 'create-term', yearId: currentYear.id })}>+ Add term</Button>}
         </div>
       </div>
-      {yearCreateOpen && <div className="max-w-2xl">{f('saveYear', 'Create academic year', [field('code', 'Year code'), date('starts_on', 'Start date'), date('ends_on', 'End date'), { ...field('status', 'Status', choices('draft', 'active', 'closed')), value: 'draft' }])}</div>}
-      {currentYear && termCreateOpen && <div className="max-w-2xl">{renderCreateTerm(currentYear)}</div>}
       {currentYear && <section className="rounded-xl border bg-card p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
@@ -139,9 +146,8 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
             <h2 className="text-2xl font-semibold">{String(currentYear.code)}</h2>
             <p className="text-sm text-muted-foreground">{period(currentYear)} · {String(currentYear.status)}</p>
           </div>
-          <Button variant="outline" onClick={() => setYearEditId(yearEditId === currentYear.id ? null : currentYear.id)}>{yearEditId === currentYear.id ? 'Close' : 'Edit year'}</Button>
+          <Button variant="outline" onClick={() => setCalendarForm({ type: 'edit-year', yearId: currentYear.id })}>Edit year</Button>
         </div>
-        {yearEditId === currentYear.id && <div className="mt-5">{renderYearEditor(currentYear, true)}</div>}
       </section>}
 
       <section className="rounded-xl border bg-card p-5 sm:p-6">
@@ -150,7 +156,7 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
             <p className="text-sm font-medium text-primary">Terms</p>
             <h3 className="text-xl font-semibold">{currentYear ? String(currentYear.code) : 'Academic year terms'}</h3>
           </div>
-          {currentYear && <Button variant="outline" onClick={() => { setTermCreateYearId(currentYear.id); setTermCreateOpen(v => !v) }}>{termCreateOpen ? 'Close' : '+ Add term'}</Button>}
+          {currentYear && <Button variant="outline" onClick={() => setCalendarForm({ type: 'create-term', yearId: currentYear.id })}>+ Add term</Button>}
         </div>
         {currentYear && <div className="mt-5 space-y-3">
           {d.terms.filter(t => t.academic_year_id === currentYear.id).sort((a, b) => Number(a.ordinal) - Number(b.ordinal)).map(term => {
@@ -166,9 +172,8 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
                   </div>
                   <p className="text-sm text-muted-foreground">{String(term.starts_on)} – {String(term.ends_on)} · Ordinal {String(term.ordinal)}</p>
                 </div>
-                <Button variant="outline" onClick={() => setTermEditId(termEditId === term.id ? null : term.id)}>{termEditId === term.id ? 'Close' : 'Edit'}</Button>
+                <Button variant="outline" onClick={() => setCalendarForm({ type: 'edit-term', termId: term.id })}>Edit</Button>
               </div>
-              {termEditId === term.id && <div className="mt-4">{renderTermEditor(term, true)}</div>}
             </div>
           })}
         </div>}
@@ -186,32 +191,56 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
           </div>)}
         </div>
       </section>}
+      <ResponsiveDialog open={calendarForm !== null} onOpenChange={open => { if (!open) setCalendarForm(null) }} title={calendarDialogTitle} description={calendarDialogDescription}>
+        {calendarForm?.type === 'create-year' && f('saveYear', 'Create academic year', [field('code', 'Year code'), date('starts_on', 'Start date'), date('ends_on', 'End date'), { ...field('status', 'Status', choices('draft', 'active', 'closed')), value: 'draft' }], {}, undefined, true)}
+        {calendarForm?.type === 'create-term' && (calendarFormYear ? renderCreateTerm(calendarFormYear) : <p role="alert" className="text-sm text-destructive">The selected academic year is no longer available.</p>)}
+        {calendarForm?.type === 'edit-year' && (calendarFormYear ? renderYearEditor(calendarFormYear) : <p role="alert" className="text-sm text-destructive">The selected academic year is no longer available.</p>)}
+        {calendarForm?.type === 'edit-term' && (calendarFormTerm ? renderTermEditor(calendarFormTerm) : <p role="alert" className="text-sm text-destructive">The selected term is no longer available.</p>)}
+      </ResponsiveDialog>
     </div>}
     {section === 'Classes' && <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-sm text-muted-foreground">Classes in {yearName(yearId) || 'the selected academic year'}</p><p className="text-sm text-muted-foreground">Organize learner groups by grade and inspect their current rosters.</p></div>
-        <Button onClick={() => setClassCreateOpen(open => !open)}>{classCreateOpen ? 'Close' : '+ Create class'}</Button>
+        <Button onClick={() => setClassForm({ type: 'create' })}>+ Create class</Button>
       </div>
-      {classCreateOpen && <div className="max-w-xl rounded-lg border bg-card p-5">
-        <div className="mb-4 space-y-1"><h2 className="text-lg font-semibold">Create class</h2><p className="text-sm text-muted-foreground">Academic year: <span className="font-medium text-foreground">{yearName(yearId) || 'None selected'}</span></p></div>
-        {yearId && grades.length ? f('saveClass', 'Create class', [field('grade_id', 'Grade', grades), field('code', 'Class code'), field('label', 'Class name')], { academic_year_id: yearId, status: 'active' }) : <p className="text-sm text-muted-foreground">{grades.length ? 'Select an academic year before creating a class.' : 'No active Grade catalogue entries are available, so a class cannot be created yet.'}</p>}
-      </div>}
+      <ResponsiveDialog open={classForm !== null} onOpenChange={open => { if (!open) setClassForm(null) }} title={classForm?.type === 'edit' ? 'Class settings' : 'Create class'} description={classForm?.type === 'edit' ? 'Update this class code, name, or status.' : `Academic year: ${yearName(yearId) || 'None selected'}`}>
+        {classForm?.type === 'create' && (yearId && grades.length ? f('saveClass', 'Create class', [field('grade_id', 'Grade', grades), field('code', 'Class code'), field('label', 'Class name')], { academic_year_id: yearId, status: 'active' }, undefined, true) : <p className="text-sm text-muted-foreground">{grades.length ? 'Select an academic year before creating a class.' : 'No active Grade catalogue entries are available, so a class cannot be created yet.'}</p>)}
+        {classForm?.type === 'edit' && (() => {
+          const classGroup = find(d.class_groups, classForm.classId)
+          return classGroup ? f('saveClass', 'Save class settings', [{ ...field('code', 'Class code'), value: value(classGroup, 'code') }, { ...field('label', 'Class name'), value: value(classGroup, 'label') }, { ...field('status', 'Status', choices('active', 'closed')), value: value(classGroup, 'status') }], { id: classGroup.id }, 'Academic year and Grade are fixed for this class history.', true) : <p role="alert" className="text-sm text-destructive">The selected class is no longer available.</p>
+        })()}
+      </ResponsiveDialog>
       {!classes.length ? <div className="rounded-lg border border-dashed p-6"><p className="font-medium">No classes have been created for {yearName(yearId) || 'the selected academic year'}.</p><p className="mt-1 text-sm text-muted-foreground">{grades.length ? 'Create the first class for this academic year.' : 'No active Grade catalogue entries are currently available. Class creation requires a configured Grade.'}</p></div> : <div className="space-y-6">
         {[...groupClassesByGrade(classes)].map(([gradeId, gradeClasses]) => { const grade = find(d.grades, gradeId); const learners = gradeClasses.reduce((total, classGroup) => total + currentClassRoster(d, classGroup.id).length, 0); return <section key={gradeId} aria-labelledby={`grade-${gradeId}`} className="space-y-3">
           <div><h2 id={`grade-${gradeId}`} className="font-semibold">{value(grade, 'label')}</h2><p className="text-sm text-muted-foreground">{gradeClasses.length} {gradeClasses.length === 1 ? 'class' : 'classes'} · {learners} current {learners === 1 ? 'learner' : 'learners'}</p></div>
-          <div className="divide-y rounded-lg border bg-card">{gradeClasses.map(c => { const roster = currentClassRoster(d, c.id); const coverage = classCoverage(d, c.id); const selected = selectedClassId === c.id; return <div key={c.id} className={`p-4 ${c.status === 'closed' ? 'bg-muted/30 text-muted-foreground' : ''}`}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="font-medium break-words">{String(c.label)}</p><p className="text-sm text-muted-foreground">{String(c.code)} · {roster.length} current {roster.length === 1 ? 'learner' : 'learners'} · {String(c.status)}</p></div><Button variant="outline" onClick={() => { setSelectedClassId(selected ? null : c.id); setClassEditOpen(false) }}>{selected ? 'Close' : 'View'}</Button></div>
+          <div className="divide-y rounded-lg border bg-card">{gradeClasses.map(c => { const roster = currentClassRoster(d, c.id); const coverage = classCoverage(d, c.id); return <div key={c.id} className={`p-4 ${c.status === 'closed' ? 'bg-muted/30 text-muted-foreground' : ''}`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="font-medium break-words">{String(c.label)}</p><p className="text-sm text-muted-foreground">{String(c.code)} · {roster.length} current {roster.length === 1 ? 'learner' : 'learners'} · {String(c.status)}</p></div><Button variant="outline" onClick={() => { setSelectedClassId(c.id); setClassForm(null) }}>View</Button></div>
             <p className="mt-2 text-xs text-muted-foreground">{coverage.offerings} subject {coverage.offerings === 1 ? 'offering' : 'offerings'} · {coverage.activeAssignments} active teaching {coverage.activeAssignments === 1 ? 'assignment' : 'assignments'}</p>
-            {selected && <div className="mt-5 space-y-6 border-t pt-5"><header className="space-y-2"><div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-semibold">{String(c.label)}</h3><span className="rounded-full border px-2.5 py-1 text-xs font-medium">{String(c.status)}</span></div><p className="text-sm text-muted-foreground">{value(grade, 'label')} · {yearName(c.academic_year_id)} · {String(c.code)}</p></header>
-              <div className="grid gap-3 sm:grid-cols-3"><div><p className="text-sm text-muted-foreground">Current learners</p><p className="text-lg font-semibold">{roster.length}</p></div><div><p className="text-sm text-muted-foreground">Subject offerings</p><p className="text-lg font-semibold">{coverage.offerings}</p></div><div><p className="text-sm text-muted-foreground">Active teaching assignments</p><p className="text-lg font-semibold">{coverage.activeAssignments}</p></div></div>
-              <div className="flex flex-wrap gap-3 text-sm"><button type="button" className="font-medium text-primary underline" onClick={() => { setClassId(c.id); setSection('Subjects') }}>Review subject offerings</button><button type="button" className="font-medium text-primary underline" onClick={() => { setClassId(c.id); setSection('Teaching') }}>Review teaching coverage</button></div>
-              <section className="space-y-3"><div className="flex items-center justify-between gap-3"><h4 className="font-semibold">Current learner roster</h4><Button variant="outline" onClick={() => setClassEditOpen(open => !open)}>{classEditOpen ? 'Close settings' : 'Class settings'}</Button></div>{roster.length ? <ul className="divide-y rounded-lg border">{roster.map(learner => <li key={learner.id} className="px-3 py-2 text-sm">{String(learner.display_name)}</li>)}</ul> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No learners are currently placed in this class.</p>}</section>
-              {!coverage.offerings && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No subject offerings are configured for this class. <button type="button" className="font-medium text-primary underline" onClick={() => setSection('Subjects')}>Open Subjects</button> to review setup.</p>}
-              {classEditOpen && <div className="max-w-xl">{f('saveClass', 'Save class settings', [{ ...field('code', 'Class code'), value: value(c, 'code') }, { ...field('label', 'Class name'), value: value(c, 'label') }, { ...field('status', 'Status', choices('active', 'closed')), value: value(c, 'status') }], { id: c.id }, 'Academic year and Grade are fixed for this class history.')}</div>}
-            </div>}
           </div> })}</div>
         </section> })}
       </div>}
+      <ResponsiveDialog open={selectedClassId !== null} onOpenChange={open => { if (!open) setSelectedClassId(null) }} title={viewedClass ? String(viewedClass.label) : 'Class details'} description={viewedClass ? `${value(viewedGrade, 'label')} · ${yearName(viewedClass.academic_year_id)} · ${String(viewedClass.code)}` : undefined} presentation="drawer">
+        {viewedClass && <div className="space-y-7">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-5">
+            <div><p className="text-sm text-muted-foreground">Class status</p><span className="mt-1 inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium">{String(viewedClass.status)}</span></div>
+            <Button variant="outline" onClick={() => { setSelectedClassId(null); setClassForm({ type: 'edit', classId: viewedClass.id }) }}>Class settings</Button>
+          </div>
+          <section aria-label="Class coverage" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">Current learners</p><p className="mt-1 text-2xl font-semibold">{viewedRoster.length}</p></div>
+            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">Subject offerings</p><p className="mt-1 text-2xl font-semibold">{viewedCoverage.offerings}</p></div>
+            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">Active teaching assignments</p><p className="mt-1 text-2xl font-semibold">{viewedCoverage.activeAssignments}</p></div>
+          </section>
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">Current learner roster</h3><span className="text-sm text-muted-foreground">{viewedRoster.length} {viewedRoster.length === 1 ? 'learner' : 'learners'}</span></div>
+            {viewedRoster.length ? <ul className="divide-y rounded-lg border bg-card">{viewedRoster.map(learner => <li key={learner.id} className="px-4 py-3 text-sm">{String(learner.display_name)}</li>)}</ul> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No learners are currently placed in this class.</p>}
+          </section>
+          <section className="space-y-3 border-t pt-5">
+            <h3 className="font-semibold">Related setup</h3>
+            <div className="flex flex-wrap gap-3"><Button variant="outline" onClick={() => { setClassId(viewedClass.id); setSelectedClassId(null); setSection('Subjects') }}>Review subject offerings</Button><Button variant="outline" onClick={() => { setClassId(viewedClass.id); setSelectedClassId(null); setSection('Teaching') }}>Review teaching coverage</Button></div>
+            {!viewedCoverage.offerings && <p className="text-sm text-muted-foreground">No subject offerings are configured for this class yet.</p>}
+          </section>
+        </div>}
+      </ResponsiveDialog>
     </div>}
     {section === 'Subjects' && <div className="space-y-6"><div className="grid md:grid-cols-2 gap-4">
       {f('saveSubject', 'Enable school subject', [field('subject_id', 'Catalogue subject', options(d.subject_catalogue.filter(s => s.status === 'active' && !d.school_subjects.some(ss => ss.subject_id === s.id)), s => `${s.curriculum_code} · ${s.name}`)), field('local_code', 'School subject code'), field('display_name', 'School subject name')], { enabled: 'true' })}
