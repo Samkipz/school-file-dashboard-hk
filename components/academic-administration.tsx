@@ -1,12 +1,13 @@
 'use client'
 
-import { useActionState, useId, useMemo, useState } from 'react'
+import { useActionState, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { administer } from '@/app/actions/administration'
+import { administer, readClassRoster, readLearnerLifecycle } from '@/app/actions/administration'
 import { AcademicRollover } from '@/components/academic-rollover'
-import { currentPeriodLabel, termPresentationState } from '@/lib/academic-navigation'
+import { currentPeriodLabel, termPresentationState, type PeriodRecord } from '@/lib/academic-navigation'
 import type { AdminData, AdminRow } from '@/lib/domain/administration'
-import { classCoverage, currentClassRoster, groupClassesByGrade } from '@/lib/domain/class-administration'
+import type { ClassRosterPage, ClassSummary } from '@/lib/domain/class-administration'
+import { groupClassesByGrade } from '@/lib/domain/class-administration'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,12 +22,15 @@ const value = (row: AdminRow | undefined, key: string) => String(row?.[key] ?? '
 const options = (rows: AdminRow[], label: (r: AdminRow) => string): Option[] => rows.map(r => ({ value: r.id, label: label(r) }))
 const field = (name: string, label: string, opts?: Option[]): Field => ({ name, label, options: opts })
 const date = (name: string, label: string, initial?: string, optional = false): Field => ({ name, label, type: 'date', value: initial, optional })
+const periodRecord = (row: AdminRow): PeriodRecord => ({ code: row.code, status: row.status, starts_on: row.starts_on, ends_on: row.ends_on })
 
 function WorkflowForm({ school, operation, title, fields, hidden = {}, hint, embedded = false }: { school: string; operation: string; title: string; fields: Field[]; hidden?: Record<string, string>; hint?: string; embedded?: boolean }) {
   const [state, action, pending] = useActionState(administer.bind(null, school, operation), { ok: false, message: '' })
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.name, f.value ?? ''])))
   const id = useId()
-  const form = <form action={action} className="space-y-4">
+  const form = <form action={action} onSubmit={event => {
+    if (operation === 'saveClass' && hidden.id && hidden.original_status !== 'closed' && values.status === 'closed' && !window.confirm('Closing this class removes its offerings from teacher access, assessment access and teacher-scoped learner files. The class roster will remain available for historical inspection. Continue?')) event.preventDefault()
+  }} className="space-y-4">
       {Object.entries(hidden).map(([name, v]) => <input key={name} name={name} value={v} type="hidden" />)}
       <fieldset disabled={pending} className="space-y-4">
         {fields.map(f => <div key={f.name} className="space-y-1"><label className="text-sm font-medium" htmlFor={`${id}-${f.name}`}>{f.label}{f.optional ? ' (optional)' : ''}</label>
@@ -45,7 +49,7 @@ function WorkflowForm({ school, operation, title, fields, hidden = {}, hint, emb
 function History({ title, rows }: { title: string; rows: { id: string; title: string; detail: string }[] }) {
   return <section className="space-y-2"><h3 className="font-semibold">{title}</h3>{rows.length ? <ul className="divide-y rounded-md border">{rows.map(r => <li key={r.id} className="p-3"><p className="font-medium">{r.title}</p><p className="text-sm text-muted-foreground">{r.detail}</p></li>)}</ul> : <p className="text-sm text-muted-foreground">No records yet.</p>}</section>
 }
-export function AcademicAdministration({ school, data: d }: { school: string; data: AdminData }) {
+export function AcademicAdministration({ school, data: d, classSummaries }: { school: string; data: AdminData; classSummaries: ClassSummary[] }) {
   const sections = ['Calendar', 'Classes', 'Subjects', 'Teaching', 'Assessment', 'Year-End']
   const sectionMeta: Record<string, { title: string; description: string }> = {
     Calendar: { title: 'Calendar', description: 'Manage academic years and school terms.' },
@@ -66,6 +70,15 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
   const [calendarForm, setCalendarForm] = useState<CalendarForm | null>(null)
   const [classForm, setClassForm] = useState<ClassForm | null>(null)
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
+  const [rosterSearch, setRosterSearch] = useState('')
+  const [rosterPage, setRosterPage] = useState(1)
+  const [rosterData, setRosterData] = useState<ClassRosterPage | null>(null)
+  const [rosterLoading, setRosterLoading] = useState(false)
+  const [rosterError, setRosterError] = useState('')
+  const rosterRequest = useRef(0)
+  const [lifecycleData, setLifecycleData] = useState<AdminData | null>(null)
+  const [lifecycleError, setLifecycleError] = useState('')
+  const [lifecyclePending, startLifecycleTransition] = useTransition()
   const find = (rows: AdminRow[], id: unknown) => rows.find(r => r.id === id)
   const yearName = (id: unknown) => value(find(d.academic_years, id), 'code')
   const className = (id: unknown) => value(find(d.class_groups, id), 'label')
@@ -79,6 +92,7 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
   const activeClasses = classes.filter(c => c.status === 'active')
   const classOptions = options(activeClasses, r => `${r.label} · ${yearName(r.academic_year_id)}`)
   const offerings = d.subject_offerings.filter(o => (!yearId || o.academic_year_id === yearId) && (!classId || o.class_group_id === classId))
+  const summaries = new Map(classSummaries.map(summary => [summary.class_group_id, summary]))
   const staff = options(d.staff_profiles.filter(s => s.status === 'active'), r => `${r.display_name} (${r.staff_code})`)
   const learner = find(d.learners, learnerId)
   const admissions = d.learner_admissions.filter(a => a.learner_id === learnerId)
@@ -101,10 +115,38 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
   const calendarFormTerm = calendarForm?.type === 'edit-term' ? find(d.terms, calendarForm.termId) : undefined
   const viewedClass = find(d.class_groups, selectedClassId)
   const viewedGrade = viewedClass ? find(d.grades, viewedClass.grade_id) : undefined
-  const viewedRoster = viewedClass ? currentClassRoster(d, viewedClass.id) : []
-  const viewedCoverage = viewedClass ? classCoverage(d, viewedClass.id) : { offerings: 0, activeAssignments: 0 }
+  const viewedSummary = viewedClass ? summaries.get(viewedClass.id) : undefined
   const calendarDialogTitle = calendarForm?.type === 'create-year' ? 'Create academic year' : calendarForm?.type === 'create-term' ? 'Add term' : calendarForm?.type === 'edit-year' ? 'Edit academic year' : 'Edit term'
   const calendarDialogDescription = calendarForm?.type === 'edit-year' ? 'Update the academic year dates and status.' : calendarForm?.type === 'edit-term' ? 'Update the term code, dates, or ordinal.' : calendarForm?.type === 'create-term' ? 'Add a term to the current academic year.' : 'Set the code, date range, and status for the new academic year.'
+  useEffect(() => {
+    if (!selectedClassId) return
+    const requestId = ++rosterRequest.current
+    let active = true
+    const timer = setTimeout(() => {
+      void readClassRoster(school, selectedClassId, rosterSearch, rosterPage).then(result => {
+        if (!active || rosterRequest.current !== requestId) return
+        if (result.ok) {
+          setRosterData(result.roster)
+          setRosterError('')
+          const lastPage = Math.max(1, Math.ceil(result.roster.total / result.roster.pageSize))
+          if (rosterPage > lastPage) setRosterPage(lastPage)
+        } else {
+          setRosterError(result.message)
+          setRosterData(null)
+        }
+        setRosterLoading(false)
+      }).catch(() => {
+        if (!active || rosterRequest.current !== requestId) return
+        setRosterData(null)
+        setRosterError('Unable to load the class roster. Try again.')
+        setRosterLoading(false)
+      })
+    }, 180)
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [school, selectedClassId, rosterSearch, rosterPage])
   const renderYearEditor = (year: AdminRow) => {
     const fields = [{ ...field('code', 'Code'), value: value(year, 'code') }, date('starts_on', 'Start date', value(year, 'starts_on')), date('ends_on', 'End date', value(year, 'ends_on')), { ...field('status', 'Status', choices('draft', 'active', 'closed')), value: value(year, 'status') }]
     return <div className="space-y-4">
@@ -117,20 +159,31 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
   }
   const renderCreateTerm = (year: AdminRow) => <div className="space-y-4">{f('saveTerm', 'Add term', [field('code', 'Code'), { ...field('ordinal', 'Ordinal'), type: 'number' }, date('starts_on', 'Start date'), date('ends_on', 'End date')], { academic_year_id: year.id }, `Add a valid term within academic year ${String(year.code)}.`, true)}</div>
   return <div className="space-y-6">
-    <header className="space-y-3">
-      <p className="text-sm font-medium text-primary">Academics</p>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="space-y-3">
-        <h1 className="text-3xl font-bold leading-tight">{sectionMeta[section]?.title ?? 'Calendar'}</h1>
-        <p className="text-muted-foreground">{sectionMeta[section]?.description ?? 'Manage academic years and school terms.'}</p>
+        <p className="text-sm font-medium text-primary">Academics</p>
+        <div className="space-y-3">
+          <h1 className="text-3xl font-bold leading-tight">{sectionMeta[section]?.title ?? 'Calendar'}</h1>
+          <p className="text-muted-foreground">{sectionMeta[section]?.description ?? 'Manage academic years and school terms.'}</p>
+        </div>
+        <div className="inline-flex rounded-full border bg-card px-3 py-2 text-sm font-medium"><span className="text-muted-foreground">Current context:</span> <span className="ml-2">{currentPeriodLabel(d.academic_years.map(periodRecord), 'year', d.today)} · {currentPeriodLabel(d.terms.map(periodRecord), 'term', d.today)}</span></div>
       </div>
-      <div className="inline-flex rounded-full border bg-card px-3 py-2 text-sm font-medium"><span className="text-muted-foreground">Current context:</span> <span className="ml-2">{currentPeriodLabel(d.academic_years, 'year', d.today)} · {currentPeriodLabel(d.terms, 'term', d.today)}</span></div>
+      <div className="w-full sm:max-w-xs sm:shrink-0">{picker('Academic year filter', yearId, v => { setYearId(v); setClassId(''); setSelectedClassId(null); setClassForm(null) }, options(d.academic_years, r => value(r, 'code')))}</div>
     </header>
 
     <nav aria-label="Academic administration sections" className="flex flex-wrap gap-2 border-b border-border pb-2">
       {sections.map(s => <button key={s} type="button" onClick={() => { setCalendarForm(null); setClassForm(null); setSelectedClassId(null); setSection(s) }} aria-pressed={section === s} className={`min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${section === s ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>{s}</button>)}
     </nav>
-    {section !== 'Year-End' && section !== 'Assessment' && <div className="max-w-md">{picker('Academic year filter', yearId, v => { setYearId(v); setClassId(''); setSelectedClassId(null); setClassForm(null) }, options(d.academic_years, r => value(r, 'code')))}</div>}
-    {section === 'Year-End' && <AcademicRollover school={school} data={d} />}
+    {section === 'Year-End' && (lifecycleData ? <AcademicRollover school={school} data={lifecycleData} /> : <section className="space-y-3" aria-live="polite">
+      <h2 className="text-2xl font-semibold">Academic Year Rollover</h2>
+      <Button disabled={lifecyclePending} onClick={() => startLifecycleTransition(async () => {
+        setLifecycleError('')
+        const result = await readLearnerLifecycle(school)
+        if (result.ok) setLifecycleData(result.data)
+        else setLifecycleError(result.message)
+      })}>{lifecyclePending ? 'Loading learner data…' : 'Load rollover candidates'}</Button>
+      {lifecycleError && <p role="alert" className="text-sm text-destructive">{lifecycleError}</p>}
+    </section>)}
     {section === 'Calendar' && <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">Overview-first school calendar</div>
@@ -160,7 +213,7 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
         </div>
         {currentYear && <div className="mt-5 space-y-3">
           {d.terms.filter(t => t.academic_year_id === currentYear.id).sort((a, b) => Number(a.ordinal) - Number(b.ordinal)).map(term => {
-            const state = termPresentationState(term, d.today)
+            const state = termPresentationState(periodRecord(term), d.today)
             const isCurrent = state === 'current'
             const badgeClass = state === 'current' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' : state === 'past' ? 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
             return <div key={term.id} className="rounded-lg border p-4">
@@ -207,15 +260,15 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
         {classForm?.type === 'create' && (yearId && grades.length ? f('saveClass', 'Create class', [field('grade_id', 'Grade', grades), field('code', 'Class code'), field('label', 'Class name')], { academic_year_id: yearId, status: 'active' }, undefined, true) : <p className="text-sm text-muted-foreground">{grades.length ? 'Select an academic year before creating a class.' : 'No active Grade catalogue entries are available, so a class cannot be created yet.'}</p>)}
         {classForm?.type === 'edit' && (() => {
           const classGroup = find(d.class_groups, classForm.classId)
-          return classGroup ? f('saveClass', 'Save class settings', [{ ...field('code', 'Class code'), value: value(classGroup, 'code') }, { ...field('label', 'Class name'), value: value(classGroup, 'label') }, { ...field('status', 'Status', choices('active', 'closed')), value: value(classGroup, 'status') }], { id: classGroup.id }, 'Academic year and Grade are fixed for this class history.', true) : <p role="alert" className="text-sm text-destructive">The selected class is no longer available.</p>
+          return classGroup ? f('saveClass', 'Save class settings', [{ ...field('code', 'Class code'), value: value(classGroup, 'code') }, { ...field('label', 'Class name'), value: value(classGroup, 'label') }, { ...field('status', 'Status', choices('active', 'closed')), value: value(classGroup, 'status') }], { id: classGroup.id, original_status: String(classGroup.status) }, 'Academic year and Grade are fixed. Closing removes this class from teacher access, assessment access, and teacher-scoped learner-file access; roster history remains inspectable.', true) : <p role="alert" className="text-sm text-destructive">The selected class is no longer available.</p>
         })()}
       </ResponsiveDialog>
       {!classes.length ? <div className="rounded-lg border border-dashed p-6"><p className="font-medium">No classes have been created for {yearName(yearId) || 'the selected academic year'}.</p><p className="mt-1 text-sm text-muted-foreground">{grades.length ? 'Create the first class for this academic year.' : 'No active Grade catalogue entries are currently available. Class creation requires a configured Grade.'}</p></div> : <div className="space-y-6">
-        {[...groupClassesByGrade(classes)].map(([gradeId, gradeClasses]) => { const grade = find(d.grades, gradeId); const learners = gradeClasses.reduce((total, classGroup) => total + currentClassRoster(d, classGroup.id).length, 0); return <section key={gradeId} aria-labelledby={`grade-${gradeId}`} className="space-y-3">
-          <div><h2 id={`grade-${gradeId}`} className="font-semibold">{value(grade, 'label')}</h2><p className="text-sm text-muted-foreground">{gradeClasses.length} {gradeClasses.length === 1 ? 'class' : 'classes'} · {learners} current {learners === 1 ? 'learner' : 'learners'}</p></div>
-          <div className="divide-y rounded-lg border bg-card">{gradeClasses.map(c => { const roster = currentClassRoster(d, c.id); const coverage = classCoverage(d, c.id); return <div key={c.id} className={`p-4 ${c.status === 'closed' ? 'bg-muted/30 text-muted-foreground' : ''}`}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="font-medium break-words">{String(c.label)}</p><p className="text-sm text-muted-foreground">{String(c.code)} · {roster.length} current {roster.length === 1 ? 'learner' : 'learners'} · {String(c.status)}</p></div><Button variant="outline" onClick={() => { setSelectedClassId(c.id); setClassForm(null) }}>View</Button></div>
-            <p className="mt-2 text-xs text-muted-foreground">{coverage.offerings} subject {coverage.offerings === 1 ? 'offering' : 'offerings'} · {coverage.activeAssignments} active teaching {coverage.activeAssignments === 1 ? 'assignment' : 'assignments'}</p>
+        {[...groupClassesByGrade(classes)].map(([gradeId, gradeClasses]) => { const grade = find(d.grades, gradeId); const learners = gradeClasses.reduce((total, classGroup) => total + (summaries.get(classGroup.id)?.learners ?? 0), 0); return <section key={gradeId} aria-labelledby={`grade-${gradeId}`} className="space-y-3">
+          <div><h2 id={`grade-${gradeId}`} className="font-semibold">{value(grade, 'label')}</h2><p className="text-sm text-muted-foreground">{gradeClasses.length} {gradeClasses.length === 1 ? 'class' : 'classes'} · {learners} learners in roster</p></div>
+          <div className="divide-y rounded-lg border bg-card">{gradeClasses.map(c => { const summary = summaries.get(c.id); return <div key={c.id} className={`p-4 ${c.status === 'closed' ? 'bg-muted/30 text-muted-foreground' : ''}`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="font-medium break-words">{String(c.label)}</p><p className="text-sm text-muted-foreground">{String(c.code)} · {summary?.learners ?? 0} {summary?.roster_mode === 'history' ? 'recorded' : 'current'} {summary?.learners === 1 ? 'learner' : 'learners'} · {String(c.status)}</p></div><Button variant="outline" onClick={() => { setSelectedClassId(c.id); setClassForm(null); setRosterSearch(''); setRosterPage(1); setRosterData(null); setRosterLoading(true); setRosterError('') }}>View</Button></div>
+            <p className="mt-2 text-xs text-muted-foreground">{summary?.offerings ?? 0} active subject {summary?.offerings === 1 ? 'offering' : 'offerings'} · {summary?.activeAssignments ?? 0} current teaching {summary?.activeAssignments === 1 ? 'assignment' : 'assignments'}</p>
           </div> })}</div>
         </section> })}
       </div>}
@@ -226,18 +279,30 @@ export function AcademicAdministration({ school, data: d }: { school: string; da
             <Button variant="outline" onClick={() => { setSelectedClassId(null); setClassForm({ type: 'edit', classId: viewedClass.id }) }}>Class settings</Button>
           </div>
           <section aria-label="Class coverage" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">Current learners</p><p className="mt-1 text-2xl font-semibold">{viewedRoster.length}</p></div>
-            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">Subject offerings</p><p className="mt-1 text-2xl font-semibold">{viewedCoverage.offerings}</p></div>
-            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">Active teaching assignments</p><p className="mt-1 text-2xl font-semibold">{viewedCoverage.activeAssignments}</p></div>
+            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">{viewedSummary?.roster_mode === 'history' ? 'Recorded learners' : 'Current learners'}</p><p className="mt-1 text-2xl font-semibold">{viewedSummary?.learners ?? 0}</p></div>
+            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">Active subject offerings</p><p className="mt-1 text-2xl font-semibold">{viewedSummary?.offerings ?? 0}</p></div>
+            <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">Current teaching assignments</p><p className="mt-1 text-2xl font-semibold">{viewedSummary?.activeAssignments ?? 0}</p></div>
           </section>
           <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">Current learner roster</h3><span className="text-sm text-muted-foreground">{viewedRoster.length} {viewedRoster.length === 1 ? 'learner' : 'learners'}</span></div>
-            {viewedRoster.length ? <ul className="divide-y rounded-lg border bg-card">{viewedRoster.map(learner => <li key={learner.id} className="px-4 py-3 text-sm">{String(learner.display_name)}</li>)}</ul> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No learners are currently placed in this class.</p>}
+            <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">{rosterData?.mode === 'history' ? 'Recorded learner roster' : 'Current learner roster'}</h3><span className="text-sm text-muted-foreground">{rosterData?.total ?? viewedSummary?.learners ?? 0} {((rosterData?.total ?? viewedSummary?.learners) === 1) ? 'learner' : 'learners'}</span></div>
+            <Input aria-label="Search learners" placeholder="Search learners or admission number" value={rosterSearch} onChange={event => { setRosterSearch(event.target.value); setRosterPage(1); setRosterLoading(true); setRosterError('') }} />
+            {rosterData?.mode === 'history' && <p className="text-sm text-muted-foreground">Historical class placement records are shown for inspection.</p>}
+            {rosterLoading && <p role="status" className="text-sm text-muted-foreground">Loading roster…</p>}
+            {rosterError && <p role="alert" className="text-sm text-destructive">{rosterError}</p>}
+            {!rosterLoading && !rosterError && rosterData && (rosterData.learners.length ? <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full min-w-[28rem] text-left text-sm"><thead className="bg-muted/50"><tr><th scope="col" className="px-4 py-3 font-medium">Name</th><th scope="col" className="px-4 py-3 font-medium">Admission number</th>{rosterData.mode === 'history' && <th scope="col" className="px-4 py-3 font-medium">Placement dates</th>}</tr></thead>
+                <tbody className="divide-y">{rosterData.learners.map(learner => <tr key={learner.learner_id}><td className="max-w-64 break-words px-4 py-3 font-medium">{learner.display_name}</td><td className="px-4 py-3">{learner.admission_number}</td>{rosterData.mode === 'history' && <td className="whitespace-nowrap px-4 py-3">{learner.placement_starts_on} – {learner.placement_ends_on ?? 'Open'}</td>}</tr>)}</tbody>
+              </table>
+            </div> : <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{rosterSearch ? 'No learners match this search. Try a different name or admission number.' : rosterData.mode === 'history' ? 'No recorded learner placements are available for this class.' : 'No learners are currently placed in this class.'}</p>)}
+            {rosterData && <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">Showing {rosterData.total ? (rosterData.page - 1) * rosterData.pageSize + 1 : 0}–{Math.min(rosterData.page * rosterData.pageSize, rosterData.total)} of {rosterData.total}</p>
+              <div className="flex gap-2"><Button type="button" variant="outline" disabled={rosterLoading || rosterData.page <= 1} onClick={() => { setRosterPage(page => Math.max(1, page - 1)); setRosterLoading(true) }}>Previous</Button><Button type="button" variant="outline" disabled={rosterLoading || rosterData.page * rosterData.pageSize >= rosterData.total} onClick={() => { setRosterPage(page => page + 1); setRosterLoading(true) }}>Next</Button></div>
+            </div>}
           </section>
           <section className="space-y-3 border-t pt-5">
             <h3 className="font-semibold">Related setup</h3>
             <div className="flex flex-wrap gap-3"><Button variant="outline" onClick={() => { setClassId(viewedClass.id); setSelectedClassId(null); setSection('Subjects') }}>Review subject offerings</Button><Button variant="outline" onClick={() => { setClassId(viewedClass.id); setSelectedClassId(null); setSection('Teaching') }}>Review teaching coverage</Button></div>
-            {!viewedCoverage.offerings && <p className="text-sm text-muted-foreground">No subject offerings are configured for this class yet.</p>}
+            {!viewedSummary?.offerings && <p className="text-sm text-muted-foreground">No active subject offerings are configured for this class yet.</p>}
           </section>
         </div>}
       </ResponsiveDialog>

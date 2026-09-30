@@ -4,8 +4,40 @@ import { administration } from '@/lib/domain/server'
 import { DomainError } from '@/lib/domain/foundation'
 import { revalidatePath } from 'next/cache'
 import type { RolloverPreview } from '@/lib/domain/learner-lifecycle'
+import type { ClassRosterPage } from '@/lib/domain/class-administration'
 
 export type AdminActionState = { ok: boolean; message: string; resourceId?: string; preview?: RolloverPreview }
+export async function readLearnerLifecycle(school: string) {
+  try {
+    return { ok: true as const, data: await administration.read(school) }
+  } catch (error) {
+    const messages = {
+      UNAUTHORIZED: 'Your session has expired. Sign in again.',
+      FORBIDDEN: 'School administrator access is required for this school.',
+      NOT_FOUND: 'This school is unavailable. Refresh and try again.',
+      INVALID_INPUT: 'Select a valid school and try again.',
+      CONFLICT: 'The learner data changed while it was loading. Refresh and try again.',
+    }
+    return { ok: false as const, message: error instanceof DomainError ? messages[error.code] : 'Unable to load year-end learner data.' }
+  }
+}
+
+export async function readClassRoster(school: string, classId: string, search: string, page: number): Promise<{ ok: true; roster: ClassRosterPage } | { ok: false; message: string }> {
+  try {
+    const roster = await administration.classRoster(school, classId, search, page)
+    return { ok: true, roster }
+  } catch (error) {
+    const messages = {
+      UNAUTHORIZED: 'Your session has expired. Sign in again.',
+      FORBIDDEN: 'School administrator access is required for this school.',
+      NOT_FOUND: 'This class is unavailable in this school. Refresh and try again.',
+      INVALID_INPUT: 'Check the search text and page, then try again.',
+      CONFLICT: 'The roster changed while it was loading. Refresh and try again.',
+    }
+    return { ok: false, message: error instanceof DomainError ? messages[error.code] : 'Unable to load the class roster.' }
+  }
+}
+
 export async function administer(school: string, operation: string, _previous: AdminActionState, form: FormData): Promise<AdminActionState> {
   try {
     const input: Record<string, string> = {}

@@ -12,7 +12,7 @@ export default async function AdministrationPage({ searchParams }: { searchParam
     try {
       const schools = await foundation.listSchools()
       const school = selectSchool(schools, params.school)
-      return { schools, school, data: school ? await administration.read(school.id) : null }
+      return { schools, school, data: school ? await administration.read(school.id, false) : null, classSummaries: school ? await administration.classSummaries(school.id) : [] }
     } catch (error) {
       if (error instanceof DomainError && error.code === 'UNAUTHORIZED') redirect('/sign-in')
       if (error instanceof DomainError) return null
@@ -22,7 +22,7 @@ export default async function AdministrationPage({ searchParams }: { searchParam
 return <AppLayout school={params.school}><div className="space-y-6 py-4 sm:py-6">
     {!loaded ? <p className="text-muted-foreground">School administrator access is required. <Link className="underline font-medium" href="/academics">View your teaching assignments</Link></p> : <>
       {loaded.school && loaded.data ? <>
-        <AcademicAdministration key={loaded.school.id} school={loaded.school.id} data={loaded.data} />
+        <AcademicAdministration key={loaded.school.id} school={loaded.school.id} data={loaded.data} classSummaries={loaded.classSummaries} />
       </> : <p className="text-muted-foreground">No available school. Select an active school membership.</p>}
     </>}
   </div></AppLayout>

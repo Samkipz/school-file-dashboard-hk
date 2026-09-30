@@ -1,12 +1,18 @@
 import { randomUUID } from 'node:crypto'
 import type { Pool } from 'pg'
 import { DomainError, foundationService, learnerName, uuidInput } from './foundation.ts'
+import { CLASS_ROSTER_PAGE_SIZE, type ClassRosterPage, type ClassSummary } from './class-administration.ts'
 import { lifecycleWorkflow } from './learner-lifecycle.ts'
+import type { PeriodRecord } from '../academic-navigation.ts'
 
 export type AdminRow = { id: string; [key: string]: string | boolean | number | null }
 export const adminTables = ['learners', 'learner_admissions', 'learner_enrolments', 'class_placements', 'learner_subject_enrolments', 'academic_years', 'terms', 'class_groups', 'school_subjects', 'subject_offerings', 'staff_profiles', 'teacher_assignments'] as const
 export type Table = typeof adminTables[number]
-export type AdminData = Record<Table | 'grades' | 'subject_catalogue' | 'subject_grades' | 'lifecycle_history', AdminRow[]> & { today: string }
+export type AdminData = Omit<Record<Table | 'grades' | 'subject_catalogue' | 'subject_grades' | 'lifecycle_history', AdminRow[]>, 'academic_years' | 'terms'> & {
+  academic_years: (AdminRow & Required<PeriodRecord>)[]
+  terms: (AdminRow & Required<PeriodRecord>)[]
+  today: string
+}
 export function dateInput(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) throw new DomainError('INVALID_INPUT')
   return value
@@ -19,14 +25,108 @@ export function dateRange(start: string, end: string | null) {
 export function administrationService(pool: Pool, identify: () => Promise<string | null>) {
   const access = foundationService(pool, identify)
   return {
-    read(school: string) {
+    classRoster(school: string, classId: string, search = '', page = 1): Promise<ClassRosterPage> {
+      uuidInput(classId)
+      const query = search.trim()
+      if (query.length > 160 || !Number.isSafeInteger(page) || page < 1 || page > Math.floor(2147483647 / CLASS_ROSTER_PAGE_SIZE)) throw new DomainError('INVALID_INPUT')
+      const escaped = query.replace(/[!%_]/g, '!$&')
+      const pattern = escaped ? `%${escaped}%` : null
+      const offset = (page - 1) * CLASS_ROSTER_PAGE_SIZE
+      return access.inSchool(school, async (db, ctx) => {
+        if (!ctx.roles.includes('school_admin')) throw new DomainError('FORBIDDEN')
+        const currentDate = `(now() AT TIME ZONE $3::text)::date`
+        const context = (await db.query(`SELECT c.status='closed' OR y.status='closed' OR ${currentDate}>y.ends_on AS is_history,
+          c.status='active' AND y.status='active' AND ${currentDate} BETWEEN y.starts_on AND y.ends_on AS is_current
+          FROM class_groups c JOIN academic_years y ON y.school_id=c.school_id AND y.id=c.academic_year_id
+          WHERE c.school_id=$1 AND c.id=$2 AND c.archived_at IS NULL AND y.archived_at IS NULL`, [school, classId, ctx.timezone])).rows[0] as { is_current: boolean; is_history: boolean } | undefined
+        if (!context) throw new DomainError('NOT_FOUND')
+        const rosterFrom = `FROM class_placements p
+          JOIN class_groups c ON c.school_id=p.school_id AND c.id=p.class_group_id
+          JOIN academic_years y ON y.school_id=c.school_id AND y.id=c.academic_year_id
+          JOIN learner_enrolments e ON e.school_id=p.school_id AND e.id=p.enrolment_id
+          JOIN learners l ON l.school_id=e.school_id AND l.id=e.learner_id
+          JOIN learner_admissions a ON a.school_id=e.school_id AND a.id=e.admission_id AND a.learner_id=e.learner_id
+          WHERE p.school_id=$1 AND c.id=$2 AND p.archived_at IS NULL AND c.archived_at IS NULL AND y.archived_at IS NULL
+            AND e.archived_at IS NULL AND l.archived_at IS NULL AND a.archived_at IS NULL
+            AND ${currentDate} IS NOT NULL
+            AND ($4::text IS NULL OR l.display_name ILIKE $4 ESCAPE '!' OR a.admission_number ILIKE $4 ESCAPE '!')`
+          const searchValues = [school, classId, ctx.timezone, pattern]
+        const currentPredicate = `AND c.status='active' AND y.status='active' AND ${currentDate} BETWEEN y.starts_on AND y.ends_on
+          AND p.academic_year_id=c.academic_year_id AND p.grade_id=c.grade_id
+          AND e.academic_year_id=c.academic_year_id AND e.grade_id=c.grade_id
+          AND l.status='active' AND a.status='active' AND e.status='active'
+          AND ${currentDate} BETWEEN a.admitted_on AND coalesce(a.left_on,y.ends_on)
+          AND ${currentDate} BETWEEN e.starts_on AND coalesce(e.ends_on,y.ends_on)
+          AND ${currentDate} BETWEEN p.starts_on AND coalesce(p.ends_on,y.ends_on)`
+        const historyMode = context.is_history
+        const filter = `${rosterFrom} ${historyMode ? '' : currentPredicate}`
+        const total = Number((await db.query(`SELECT count(DISTINCT l.id)::int AS total ${filter}`, searchValues)).rows[0].total)
+        const learners = (await db.query(`SELECT roster.learner_id,roster.display_name,roster.admission_number,roster.learner_status,roster.enrolment_status,roster.placement_starts_on,roster.placement_ends_on
+          FROM (SELECT DISTINCT ON (l.id) l.id AS learner_id,l.display_name,a.admission_number,l.status AS learner_status,e.status AS enrolment_status,p.starts_on::text AS placement_starts_on,p.ends_on::text AS placement_ends_on
+            ${filter} ORDER BY l.id,p.starts_on DESC,p.id DESC) roster
+          ORDER BY lower(roster.display_name),roster.display_name,roster.learner_id LIMIT $5 OFFSET $6`, [...searchValues, CLASS_ROSTER_PAGE_SIZE, offset])).rows
+        return { mode: historyMode ? 'history' : 'current', page, pageSize: CLASS_ROSTER_PAGE_SIZE, total, search: query, learners }
+      })
+    },
+    classSummaries(school: string): Promise<ClassSummary[]> {
+      return access.inSchool(school, async (db, ctx) => {
+        if (!ctx.roles.includes('school_admin')) throw new DomainError('FORBIDDEN')
+        const currentDate = `(now() AT TIME ZONE $2::text)::date`
+        const currentClass = `c.status='active' AND y.status='active' AND ${currentDate} BETWEEN y.starts_on AND y.ends_on`
+        const historicalClass = `c.status='closed' OR y.status='closed' OR ${currentDate}>y.ends_on`
+        const currentLearner = `p.academic_year_id=c.academic_year_id AND p.grade_id=c.grade_id
+          AND e.academic_year_id=c.academic_year_id AND e.grade_id=c.grade_id
+          AND l.status='active' AND a.status='active' AND e.status='active'
+          AND ${currentDate} BETWEEN a.admitted_on AND coalesce(a.left_on,y.ends_on)
+          AND ${currentDate} BETWEEN e.starts_on AND coalesce(e.ends_on,y.ends_on)
+          AND ${currentDate} BETWEEN p.starts_on AND coalesce(p.ends_on,y.ends_on)`
+        const result = await db.query(`SELECT c.id AS class_group_id,
+          CASE WHEN ${historicalClass} THEN 'history' ELSE 'current' END AS roster_mode,
+          CASE WHEN ${historicalClass} THEN (
+            SELECT count(DISTINCT l.id)::int FROM class_placements p
+            JOIN learner_enrolments e ON e.school_id=p.school_id AND e.id=p.enrolment_id
+            JOIN learners l ON l.school_id=e.school_id AND l.id=e.learner_id
+            JOIN learner_admissions a ON a.school_id=e.school_id AND a.id=e.admission_id AND a.learner_id=e.learner_id
+            WHERE p.school_id=c.school_id AND p.class_group_id=c.id AND p.archived_at IS NULL AND e.archived_at IS NULL AND l.archived_at IS NULL AND a.archived_at IS NULL
+          ) ELSE (
+            SELECT count(DISTINCT l.id)::int FROM class_placements p
+            JOIN learner_enrolments e ON e.school_id=p.school_id AND e.id=p.enrolment_id
+            JOIN learners l ON l.school_id=e.school_id AND l.id=e.learner_id
+            JOIN learner_admissions a ON a.school_id=e.school_id AND a.id=e.admission_id AND a.learner_id=e.learner_id
+            WHERE p.school_id=c.school_id AND p.class_group_id=c.id AND p.archived_at IS NULL AND e.archived_at IS NULL AND l.archived_at IS NULL AND a.archived_at IS NULL
+              AND ${currentLearner}
+          ) END AS learners,
+          CASE WHEN ${currentClass} THEN (
+            SELECT count(*)::int FROM subject_offerings o JOIN school_subjects ss ON ss.school_id=o.school_id AND ss.id=o.school_subject_id
+            WHERE o.school_id=c.school_id AND o.class_group_id=c.id AND o.academic_year_id=c.academic_year_id
+              AND o.status='active' AND o.archived_at IS NULL AND ss.enabled AND ss.archived_at IS NULL
+          ) ELSE 0 END AS offerings,
+          CASE WHEN ${currentClass} THEN (
+            SELECT count(DISTINCT ta.id)::int FROM subject_offerings o
+            JOIN school_subjects ss ON ss.school_id=o.school_id AND ss.id=o.school_subject_id
+            JOIN teacher_assignments ta ON ta.school_id=o.school_id AND ta.offering_id=o.id
+            JOIN staff_profiles sp ON sp.school_id=ta.school_id AND sp.id=ta.staff_id
+            WHERE o.school_id=c.school_id AND o.class_group_id=c.id AND o.academic_year_id=c.academic_year_id
+              AND o.status='active' AND o.archived_at IS NULL AND ss.enabled AND ss.archived_at IS NULL
+              AND ta.status='active' AND ta.archived_at IS NULL AND sp.status='active' AND sp.archived_at IS NULL
+              AND ta.starts_on<=${currentDate} AND (ta.ends_on IS NULL OR ta.ends_on>=${currentDate})
+          ) ELSE 0 END AS "activeAssignments"
+          FROM class_groups c JOIN academic_years y ON y.school_id=c.school_id AND y.id=c.academic_year_id
+          WHERE c.school_id=$1 AND c.archived_at IS NULL AND y.archived_at IS NULL ORDER BY c.academic_year_id,c.grade_id,c.label,c.id`, [school, ctx.timezone])
+        return result.rows.map(row => ({ ...row, learners: Number(row.learners), offerings: Number(row.offerings), activeAssignments: Number(row.activeAssignments) })) as ClassSummary[]
+      })
+    },
+    read(school: string, includeLearnerLifecycle = true) {
       return access.inSchool(school, async (db, ctx) => {
         if (!ctx.roles.includes('school_admin')) throw new DomainError('FORBIDDEN')
         const data = {} as AdminData
-        for (const table of adminTables) data[table] = (await db.query(`SELECT to_jsonb(t) AS row FROM ${table} t WHERE school_id=$1 AND archived_at IS NULL ORDER BY created_at,id`, [school])).rows.map(r => r.row)
+        const lifecycleTables = new Set<Table>(['learners', 'learner_admissions', 'learner_enrolments', 'class_placements', 'learner_subject_enrolments'])
+        for (const table of adminTables) {
+          data[table] = !includeLearnerLifecycle && lifecycleTables.has(table) ? [] : (await db.query(`SELECT to_jsonb(t) AS row FROM ${table} t WHERE school_id=$1 AND archived_at IS NULL ORDER BY created_at,id`, [school])).rows.map(r => r.row)
+        }
         for (const table of ['grades', 'subject_catalogue', 'subject_grades'] as const) data[table] = (await db.query(`SELECT to_jsonb(t) AS row FROM ${table} t WHERE archived_at IS NULL ORDER BY id`)).rows.map(r => r.row)
         data.today = (await db.query('SELECT ((now() AT TIME ZONE $1)::date)::text AS today', [ctx.timezone])).rows[0].today
-        data.lifecycle_history = (await db.query(`SELECT id,resource_id AS learner_id,event_type,reason,occurred_at::text,safe_changes->>'effective_on' AS effective_on,safe_changes->>'from_status' AS from_status,safe_changes->>'to_status' AS to_status FROM audit_events WHERE school_id=$1 AND event_type='learner.lifecycle' ORDER BY occurred_at,id`, [school])).rows
+        data.lifecycle_history = includeLearnerLifecycle ? (await db.query(`SELECT id,resource_id AS learner_id,event_type,reason,occurred_at::text,safe_changes->>'effective_on' AS effective_on,safe_changes->>'from_status' AS from_status,safe_changes->>'to_status' AS to_status FROM audit_events WHERE school_id=$1 AND event_type='learner.lifecycle' ORDER BY occurred_at,id`, [school])).rows : []
         return data
       })
     },

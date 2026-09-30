@@ -1,34 +1,30 @@
-import type { AdminData, AdminRow } from './administration.ts'
+import type { AdminRow } from './administration.ts'
 
-export function isCurrentRecord(row: AdminRow, today: string) {
-  return String(row.starts_on) <= today && (!row.ends_on || String(row.ends_on) >= today) && (!row.status || row.status === 'active')
+export const CLASS_ROSTER_PAGE_SIZE = 25
+export type ClassRosterMode = 'current' | 'history'
+export type ClassRosterLearner = {
+  learner_id: string
+  display_name: string
+  admission_number: string
+  learner_status: string
+  enrolment_status: string
+  placement_starts_on: string
+  placement_ends_on: string | null
 }
-
-export function currentClassRoster(data: AdminData, classId: string) {
-  const currentEnrolments = new Set(data.learner_enrolments
-    .filter(enrolment => isCurrentRecord(enrolment, data.today))
-    .map(enrolment => enrolment.id))
-  const activeLearners = new Map(data.learners
-    .filter(learner => learner.status === 'active')
-    .map(learner => [learner.id, learner]))
-  const learnerIds = new Set(data.class_placements
-    .filter(placement => placement.class_group_id === classId && isCurrentRecord(placement, data.today) && currentEnrolments.has(String(placement.enrolment_id)))
-    .map(placement => data.learner_enrolments.find(enrolment => enrolment.id === placement.enrolment_id)?.learner_id)
-    .filter((learnerId): learnerId is string => Boolean(learnerId)))
-
-  return [...learnerIds]
-    .map(learnerId => activeLearners.get(learnerId))
-    .filter((learner): learner is AdminRow => Boolean(learner))
-    .sort((a, b) => `${a.display_name}`.localeCompare(`${b.display_name}`) || a.id.localeCompare(b.id))
+export type ClassRosterPage = {
+  mode: ClassRosterMode
+  page: number
+  pageSize: number
+  total: number
+  search: string
+  learners: ClassRosterLearner[]
 }
-
-export function classCoverage(data: AdminData, classId: string) {
-  const offerings = data.subject_offerings.filter(offering => offering.class_group_id === classId)
-  const offeringIds = new Set(offerings.map(offering => offering.id))
-  return {
-    offerings: offerings.length,
-    activeAssignments: data.teacher_assignments.filter(assignment => offeringIds.has(String(assignment.offering_id)) && assignment.status === 'active').length,
-  }
+export type ClassSummary = {
+  class_group_id: string
+  roster_mode: ClassRosterMode
+  learners: number
+  offerings: number
+  activeAssignments: number
 }
 
 export function groupClassesByGrade(classes: AdminRow[]) {

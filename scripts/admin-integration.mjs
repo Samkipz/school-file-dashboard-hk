@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import { developmentPool, safeFailure } from './db-common.mjs'
 import { fixtureId as id, devSchoolId as school } from './dev-fixtures.mjs'
 import { administrationService } from '../lib/domain/administration.ts'
@@ -30,6 +31,59 @@ try {
   await test('admin reads school-scoped administration data', async () => {
     const expected = (await client.query('SELECT count(*)::int AS n FROM learners WHERE school_id=$1 AND archived_at IS NULL', [school])).rows[0].n
     assert.equal((await service.read(school)).learners.length, expected)
+  })
+  const rosterBaseline = (await service.classRoster(school, id('class'))).total
+  const addFixture = async (table, fields) => {
+    const values = { id: randomUUID(), school_id: school, created_by_actor_id: id('bootstrap'), updated_by_actor_id: id('bootstrap'), ...fields }
+    const keys = Object.keys(values)
+    await client.query(`INSERT INTO ${table} (${keys.join(',')}) VALUES (${keys.map((_, index) => `$${index + 1}`).join(',')})`, Object.values(values))
+    return values.id
+  }
+  for (let index = 1; index <= 30; index++) {
+    const learner = await addFixture('learners', { display_name: `Class Roster ${String(index).padStart(2, '0')}`, status: 'active' })
+    const admission = await addFixture('learner_admissions', { learner_id: learner, admission_number: `ROSTER-${String(index).padStart(3, '0')}`, admitted_on: '2026-01-01', status: 'active' })
+    const enrolment = await addFixture('learner_enrolments', { learner_id: learner, admission_id: admission, academic_year_id: id('year'), grade_id: id('grade'), starts_on: '2026-01-01', ends_on: '2026-12-31', status: 'active' })
+    await addFixture('class_placements', { enrolment_id: enrolment, class_group_id: id('class'), academic_year_id: id('year'), grade_id: id('grade'), starts_on: '2026-01-01', ends_on: '2026-12-31' })
+  }
+  async function excludedRosterFixture(kind) {
+    const learner = await addFixture('learners', { display_name: `Excluded ${kind}`, status: kind === 'inactive learner' ? 'left' : 'active' })
+    const archived = kind === 'archived admission' ? { archived_at: new Date() } : {}
+    const admission = await addFixture('learner_admissions', { learner_id: learner, admission_number: `EXCLUDED-${kind.toUpperCase().replaceAll(' ', '-')}`, admitted_on: '2026-01-01', status: kind === 'expired admission' ? 'closed' : 'active', ...(kind === 'expired admission' ? { left_on: '2026-01-31' } : {}), ...archived })
+    const enrolmentArchived = kind === 'archived enrolment' ? { archived_at: new Date() } : {}
+    const enrolment = await addFixture('learner_enrolments', { learner_id: learner, admission_id: admission, academic_year_id: id('year'), grade_id: id('grade'), starts_on: '2026-01-01', ends_on: kind === 'expired admission' || kind === 'expired enrolment' ? '2026-01-31' : '2026-12-31', status: kind === 'expired enrolment' ? 'completed' : 'active', ...enrolmentArchived })
+    await addFixture('class_placements', { enrolment_id: enrolment, class_group_id: id('class'), academic_year_id: id('year'), grade_id: id('grade'), starts_on: '2026-01-01', ends_on: kind === 'expired placement' ? '2026-01-31' : kind === 'expired admission' || kind === 'expired enrolment' ? '2026-01-31' : '2026-12-31', ...(kind === 'archived placement' ? { archived_at: new Date() } : {}) })
+  }
+  for (const kind of ['expired admission', 'expired enrolment', 'expired placement', 'inactive learner', 'archived admission', 'archived enrolment', 'archived placement']) await excludedRosterFixture(kind)
+  await test('current admin roster is school/class scoped, lifecycle-current and bounded to 25', async () => {
+    const first = await service.classRoster(school, id('class'))
+    const second = await service.classRoster(school, id('class'), '', 2)
+    assert.equal(first.mode, 'current'); assert.equal(first.total, rosterBaseline + 30); assert.equal(first.learners.length, 25)
+    assert.equal(second.total, first.total); assert.equal(second.learners.length, first.total - 25)
+    assert.deepEqual(first.learners.map(l => `${l.display_name.toLowerCase()}|${l.learner_id}`), [...first.learners].map(l => `${l.display_name.toLowerCase()}|${l.learner_id}`).sort())
+    assert.ok(![...first.learners, ...second.learners].some(l => l.display_name.startsWith('Excluded ')))
+    assert.equal((await service.classRoster(school, id('class'), 'ROSTER-017')).total, 1)
+    assert.equal((await service.classRoster(school, id('class'), 'does-not-match')).total, 0)
+    const summary = (await service.classSummaries(school)).find(item => item.class_group_id === id('class'))
+    assert.deepEqual({ mode: summary.roster_mode, learners: summary.learners, offerings: summary.offerings, assignments: summary.activeAssignments }, { mode: 'current', learners: rosterBaseline + 30, offerings: 3, assignments: 3 })
+    await client.query('SAVEPOINT dated_class_summary')
+    try {
+      await client.query("UPDATE teacher_assignments SET starts_on='2026-12-01' WHERE school_id=$1 AND id=$2", [school, id('assignment-math')])
+      const dated = (await service.classSummaries(school)).find(item => item.class_group_id === id('class'))
+      assert.equal(dated.activeAssignments, 2)
+    } finally { await client.query('ROLLBACK TO SAVEPOINT dated_class_summary') }
+    await assert.rejects(service.classRoster(school, randomUUID()), /NOT_FOUND/)
+  })
+  let historicalClass
+  await test('closed class retains recorded learner roster history', async () => {
+    historicalClass = await run('saveClass', { academic_year_id: id('year'), grade_id: id('grade'), code: 'ROSTER-HISTORY', label: 'Roster History Class', status: 'active' })
+    const learner = await addFixture('learners', { display_name: 'Historical Class Learner', status: 'active' })
+    const admission = await addFixture('learner_admissions', { learner_id: learner, admission_number: 'ROSTER-HISTORY-001', admitted_on: '2026-01-01', status: 'active' })
+    const enrolment = await addFixture('learner_enrolments', { learner_id: learner, admission_id: admission, academic_year_id: id('year'), grade_id: id('grade'), starts_on: '2026-01-01', ends_on: '2026-12-31', status: 'active' })
+    await addFixture('class_placements', { enrolment_id: enrolment, class_group_id: historicalClass, academic_year_id: id('year'), grade_id: id('grade'), starts_on: '2026-01-01', ends_on: '2026-12-31' })
+    await run('saveClass', { id: historicalClass, code: 'ROSTER-HISTORY', label: 'Roster History Class', status: 'closed' })
+    const history = await service.classRoster(school, historicalClass)
+    assert.equal(history.mode, 'history')
+    assert.ok(history.learners.some(row => row.display_name === 'Historical Class Learner'))
   })
   await reject('required learner name', 'addLearner', { display_name: ' ' })
   await test('add learner', async () => { learner = await run('addLearner', { display_name: 'Workflow integration learner' }); assert.equal((await row('learners', learner)).display_name, 'Workflow integration learner') })
@@ -125,6 +179,10 @@ try {
   const foreignLearner = id('workflow-foreign-learner')
   await client.query(`INSERT INTO schools (id,code,name,created_by_actor_id,updated_by_actor_id) VALUES ($1,'WORKFLOW-OTHER','Other School',$2,$2)`, [otherSchool, id('bootstrap')])
   await client.query(`INSERT INTO learners (id,school_id,display_name,created_by_actor_id,updated_by_actor_id) VALUES ($1,$2,'Foreign Learner',$3,$3)`, [foreignLearner, otherSchool, id('bootstrap')])
+  const foreignYear = id('workflow-foreign-year'), foreignClass = id('workflow-foreign-class')
+  await client.query(`INSERT INTO academic_years (id,school_id,code,starts_on,ends_on,status,created_by_actor_id,updated_by_actor_id) VALUES ($1,$2,'2026', '2026-01-01','2026-12-31','active',$3,$3)`, [foreignYear, otherSchool, id('bootstrap')])
+  await client.query(`INSERT INTO class_groups (id,school_id,academic_year_id,grade_id,code,label,status,created_by_actor_id,updated_by_actor_id) VALUES ($1,$2,$3,$4,'FOREIGN','Foreign class','active',$5,$5)`, [foreignClass, otherSchool, foreignYear, id('grade'), id('bootstrap')])
+  await test('class roster cannot resolve a foreign-school class ID', () => assert.rejects(service.classRoster(school, foreignClass), /NOT_FOUND/))
   await test('cross-school admin read rejected', () => assert.rejects(service.read(otherSchool), /FORBIDDEN/))
   await test('caller-supplied foreign school rejected', () => assert.rejects(service.execute(otherSchool, 'addLearner', { display_name: 'Attack' }), /FORBIDDEN/))
   await reject('foreign learner reference with own school rejected', 'admit', { learner_id: foreignLearner, admission_number: 'ATTACK', admitted_on: '2026-01-01' }, 'NOT_FOUND')
